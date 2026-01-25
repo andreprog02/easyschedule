@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+{% load core_extras %} {% block title %}Configurações da Empresa - EasySchedule{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <form method="POST" enctype="multipart/form-data" class="space-y-8">
+        {% csrf_token %}
+
+        <div class="flex justify-between items-center bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800">Dados da Empresa</h1>
+                <p class="text-gray-500 text-sm">Configure sua marca, contatos e horários de funcionamento.</p>
+            </div>
+            <button type="submit" class="bg-accent text-white px-8 py-3 rounded-lg font-bold hover:bg-blue-600 shadow-lg transition transform hover:scale-105">
+                <i class="fa-solid fa-save mr-2"></i> Salvar Alterações
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <div class="lg:col-span-2 space-y-6">
+                
+                <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100">
+                    <h3 class="text-lg font-bold mb-4 border-b pb-2 text-gray-700">Informações de Identidade</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="md:col-span-2 flex items-center gap-6 mb-4 bg-gray-50 p-4 rounded-lg">
+                            <div class="relative">
+                                {% if empresa.logo %}
+                                    <img src="{{ empresa.logo.url }}" class="w-24 h-24 rounded-lg object-cover border-2 border-white shadow-sm">
+                                {% else %}
+                                    <div class="w-24 h-24 rounded-lg bg-gray-200 flex items-center justify-center text-gray-400">
+                                        <i class="fa-solid fa-image text-2xl"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="flex-1">
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Alterar Logo da Empresa</label>
+                                <input type="file" name="logo" class="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-accent hover:file:bg-blue-100">
+                            </div>
+                        </div>
+                        
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700">Nome Fantasia</label>
+                            <input type="text" name="nome" value="{{ empresa.nome }}" class="mt-1 block w-full border border-gray-300 rounded-md p-2 focus:ring-accent focus:border-accent">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Telefone / WhatsApp</label>
+                            <input type="text" id="tel-mask" name="telefone" value="{{ empresa.telefone }}" class="mt-1 block w-full border border-gray-300 rounded-md p-2 focus:ring-accent focus:border-accent">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">E-mail de Contato</label>
+                            <input type="email" name="email" value="{{ empresa.email }}" class="mt-1 block w-full border border-gray-300 rounded-md p-2 focus:ring-accent focus:border-accent">
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700">CPF / CNPJ</label>
+                            <input type="text" id="doc-mask" name="cpf_cnpj" value="{{ empresa.cpf_cnpj }}" class="mt-1 block w-full border border-gray-300 rounded-md p-2 focus:ring-accent focus:border-accent">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100">
+                    <h3 class="text-lg font-bold mb-4 border-b pb-2 text-gray-700">Localização</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                            <label class="text-sm font-medium text-gray-700">CEP</label>
+                            <input type="text" id="cep-mask" name="cep" value="{{ empresa.cep }}" class="block w-full border border-gray-300 rounded-md p-2 focus:ring-accent focus:border-accent">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="text-sm font-medium text-gray-700">Logradouro</label>
+                            <input type="text" id="endereco" name="endereco" value="{{ empresa.endereco }}" class="block w-full border border-gray-300 rounded-md p-2">
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium text-gray-700">Número</label>
+                            <input type="text" name="numero" value="{{ empresa.numero }}" class="block w-full border border-gray-300 rounded-md p-2">
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium text-gray-700">Bairro</label>
+                            <input type="text" id="bairro" name="bairro" value="{{ empresa.bairro }}" class="block w-full border border-gray-300 rounded-md p-2">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="text-sm font-medium text-gray-700">Cidade / UF</label>
+                            <div class="flex gap-2">
+                                <input type="text" id="cidade" name="cidade" value="{{ empresa.cidade }}" class="block w-full border border-gray-300 rounded-md p-2">
+                                <input type="text" id="estado" name="estado" value="{{ empresa.estado }}" class="w-16 border border-gray-300 rounded-md p-2 text-center uppercase">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-1">
+                <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100">
+                    <h3 class="text-lg font-bold mb-2 border-b pb-2 text-accent">Horários da Loja</h3>
+                    <p class="text-[11px] text-gray-400 mb-6 leading-tight uppercase tracking-widest font-bold">Configure os dias de abertura</p>
+                    
+                    <div class="space-y-3">
+                        {% for dia_id, dia_nome in dias_formatados %}
+                        
+                            {% with info_dia=empresa.horarios_padrao|get_item:dia_id %}
+                            
+                            <div class="p-3 rounded-lg border transition-all {% if info_dia.aberto %}bg-blue-50 border-blue-200 shadow-sm{% else %}bg-gray-50 border-gray-200 opacity-60{% endif %}">
+                                <div class="flex items-center justify-between mb-3">
+                                    <span class="font-bold text-gray-700 text-sm capitalize">{{ dia_nome }}</span>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" name="aberto_{{ dia_id }}" 
+                                            {% if info_dia.aberto %}checked{% endif %}
+                                            class="sr-only peer">
+                                        <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-accent"></div>
+                                    </label>
+                                </div>
+                                
+                                <div class="flex items-center gap-2 text-xs">
+                                    <div class="flex-1">
+                                        <input type="time" name="inicio_{{ dia_id }}" 
+                                            value="{{ info_dia.inicio|default:'08:00' }}" 
+                                            class="w-full border border-gray-300 rounded p-1.5 focus:ring-accent focus:border-accent">
+                                    </div>
+                                    <span class="text-gray-400 font-bold">às</span>
+                                    <div class="flex-1">
+                                        <input type="time" name="fim_{{ dia_id }}" 
+                                            value="{{ info_dia.fim|default:'18:00' }}" 
+                                            class="w-full border border-gray-300 rounded p-1.5 focus:ring-accent focus:border-accent">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {% endwith %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Máscaras
+        Inputmask("(99) 9 9999-9999").mask(document.getElementById("tel-mask"));
+        Inputmask("99999-999").mask(document.getElementById("cep-mask"));
+        
+        var docMask = document.getElementById("doc-mask");
+        docMask.addEventListener('input', function() {
+            var val = this.value.replace(/\D/g, '');
+            var m = val.length > 11 ? "99.999.999/9999-99" : "999.999.999-99";
+            Inputmask(m).mask(this);
+        });
+
+        // Integração ViaCEP
+        document.getElementById("cep-mask").addEventListener('blur', function() {
+            var cep = this.value.replace(/\D/g, '');
+            if(cep.length === 8) {
+                fetch(`https://viacep.com.br/ws/${cep}/json/`)
+                .then(r => r.json())
+                .then(data => {
+                    if(!data.erro) {
+                        document.getElementById("endereco").value = data.logradouro;
+                        document.getElementById("bairro").value = data.bairro;
+                        document.getElementById("cidade").value = data.localidade;
+                        document.getElementById("estado").value = data.uf;
+                    }
+                });
+            }
+        });
+    });
+</script>
+{% endblock %}

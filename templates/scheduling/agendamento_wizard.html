@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Agendamento Online{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    
+    <div class="mb-8">
+        <div class="flex items-center justify-between text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <div class="step-indicator text-accent font-bold">1. Categoria</div>
+            <div class="step-indicator">2. Serviço</div>
+            <div class="step-indicator">3. Profissional</div>
+            <div class="step-indicator">4. Data/Hora</div>
+            <div class="step-indicator">5. Confirmar</div>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+            <div id="progress-bar" class="bg-accent h-2.5 rounded-full" style="width: 20%"></div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-2xl overflow-hidden min-h-[500px] relative">
+        
+        <div id="step-1" class="step-content active p-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">O que vamos fazer hoje?</h2>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4" id="categories-container">
+                {% for categoria in categorias %}
+                <button onclick="selectCategory('{{ categoria.id }}')" 
+                        class="h-32 flex flex-col items-center justify-center p-4 border-2 border-gray-100 rounded-xl hover:border-accent hover:bg-blue-50 transition-all group">
+                    <i class="fa-solid fa-scissors text-3xl text-gray-400 group-hover:text-accent mb-2"></i>
+                    <span class="font-semibold text-gray-700 group-hover:text-accent">{{ categoria.nome }}</span>
+                </button>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div id="step-2" class="step-content p-8">
+            <div class="flex items-center mb-6">
+                <button onclick="prevStep(1)" class="mr-4 text-gray-400 hover:text-gray-600"><i class="fa-solid fa-arrow-left"></i></button>
+                <h2 class="text-2xl font-bold text-gray-800">Escolha o Serviço</h2>
+            </div>
+            <div id="services-list" class="space-y-3">
+                <div class="animate-pulse bg-gray-100 h-16 rounded-lg w-full"></div>
+            </div>
+        </div>
+
+        <div id="step-3" class="step-content p-8">
+            <div class="flex items-center mb-6">
+                <button onclick="prevStep(2)" class="mr-4 text-gray-400 hover:text-gray-600"><i class="fa-solid fa-arrow-left"></i></button>
+                <h2 class="text-2xl font-bold text-gray-800">Quem vai te atender?</h2>
+            </div>
+            <div id="professionals-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                </div>
+        </div>
+
+        <div id="step-4" class="step-content p-8">
+            <div class="flex items-center mb-6">
+                <button onclick="prevStep(3)" class="mr-4 text-gray-400 hover:text-gray-600"><i class="fa-solid fa-arrow-left"></i></button>
+                <h2 class="text-2xl font-bold text-gray-800">Melhor horário</h2>
+            </div>
+            
+            <div class="flex flex-col md:flex-row gap-8">
+                <div class="w-full md:w-1/2">
+                    <input type="text" id="calendar-inline" class="hidden">
+                </div>
+                
+                <div class="w-full md:w-1/2">
+                    <h3 class="font-semibold text-gray-600 mb-4" id="selected-date-display">Selecione uma data</h3>
+                    <div id="time-slots" class="grid grid-cols-3 gap-2 max-h-[300px] overflow-y-auto custom-scrollbar">
+                        <div class="text-gray-400 text-sm italic">Escolha um dia no calendário para ver os horários.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="step-5" class="step-content p-8">
+            <div class="flex items-center mb-6">
+                <button onclick="prevStep(4)" class="mr-4 text-gray-400 hover:text-gray-600"><i class="fa-solid fa-arrow-left"></i></button>
+                <h2 class="text-2xl font-bold text-gray-800">Finalizar Agendamento</h2>
+            </div>
+
+            <div class="bg-blue-50 p-4 rounded-lg mb-6 border border-blue-100">
+                <h4 class="font-bold text-blue-800 mb-2">Resumo:</h4>
+                <ul class="text-sm text-blue-700 space-y-1">
+                    <li><strong>Serviço:</strong> <span id="summary-service">...</span></li>
+                    <li><strong>Profissional:</strong> <span id="summary-professional">...</span></li>
+                    <li><strong>Data:</strong> <span id="summary-datetime">...</span></li>
+                    <li><strong>Valor:</strong> <span id="summary-price">...</span></li>
+                </ul>
+            </div>
+
+            <form id="booking-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Seu Nome</label>
+                    <input type="text" id="client-name" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2 border focus:ring-accent focus:border-accent">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Seu Celular (WhatsApp)</label>
+                    <input type="text" id="client-phone" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2 border focus:ring-accent focus:border-accent" placeholder="(24) 9 9999-9999">
+                </div>
+                
+                <button type="button" onclick="confirmBooking()" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition shadow-lg mt-4">
+                    Confirmar Agendamento
+                </button>
+            </form>
+        </div>
+
+    </div>
+</div>
+
+<input type="hidden" id="selected-category-id">
+<input type="hidden" id="selected-service-id">
+<input type="hidden" id="selected-professional-id">
+<input type="hidden" id="selected-date">
+<input type="hidden" id="selected-time">
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/agendamento.js' %}"></script>
+{% endblock %}

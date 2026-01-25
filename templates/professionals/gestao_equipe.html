@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+
+{% block title %}Equipe - EasySchedule{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <div class="flex justify-between items-center mb-8">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">Minha Equipe</h1>
+            <p class="text-gray-500 text-sm">Gerencie horários e especialidades.</p>
+        </div>
+        <button onclick="modalProfissional()" class="bg-accent text-white px-5 py-2 rounded-lg hover:bg-blue-600 transition shadow-md">
+            <i class="fa-solid fa-user-plus mr-2"></i> Novo Profissional
+        </button>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for prof in profissionais %}
+        <div class="bg-white rounded-xl shadow-md p-6 border border-gray-100 flex flex-col items-center text-center relative group">
+            <div class="absolute top-4 right-4 flex gap-2">
+                <button onclick="modalProfissional('{{ prof.id }}')" class="text-blue-400 hover:text-blue-600 transition" title="Editar">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                </button>
+                <button onclick="excluirProfissional('{{ prof.id }}')" class="text-gray-300 hover:text-red-500 transition" title="Excluir">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </div>
+            
+            {% if prof.foto %}
+                <img src="{{ prof.foto.url }}" class="w-20 h-20 rounded-full object-cover mb-3 border-2 border-blue-50">
+            {% else %}
+                <div class="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mb-3 text-gray-400"><i class="fa-solid fa-user text-2xl"></i></div>
+            {% endif %}
+            
+            <h3 class="font-bold text-gray-800">{{ prof.nome }}</h3>
+            <p class="text-xs text-accent font-semibold uppercase tracking-wider mb-3">{{ prof.especialidade }}</p>
+            
+            <div class="w-full border-t pt-3 mt-auto">
+                <span class="text-[10px] text-gray-400 font-bold block mb-2">DIAS DE TRABALHO:</span>
+                <div class="flex justify-center gap-1">
+                    {% for dia, config in prof.jornada_config.items %}
+                        <span class="w-6 h-6 flex items-center justify-center rounded-full bg-blue-50 text-accent text-[9px] font-bold" title="{{ config.entrada }} - {{ config.saida }}">
+                            {{ dia|slice:":1"|upper }}
+                        </span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+async function modalProfissional(id = null) {
+    let dados = { nome: '', especialidade: '', servicos: [], jornada: {} };
+    let titulo = id ? 'Editar Profissional' : 'Novo Profissional';
+    let urlAction = id ? `/equipe/api/edit/${id}/` : "{% url 'api_add_profissional' %}";
+
+    if (id) {
+        const resp = await fetch(`/equipe/api/get/${id}/`);
+        dados = await resp.json();
+    }
+
+    const { value: formValues } = await Swal.fire({
+        title: `<div class="text-left border-b pb-2">${titulo}</div>`,
+        html: `
+            <div class="text-left space-y-4 mt-4 overflow-x-hidden">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-xs font-bold text-gray-400">NOME</label>
+                        <input id="p-nome" class="swal2-input !m-0 !w-full" value="${dados.nome}">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-gray-400">ESPECIALIDADE</label>
+                        <input id="p-espec" class="swal2-input !m-0 !w-full" value="${dados.especialidade}">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-xs font-bold text-gray-400">FOTO</label>
+                    <input id="p-foto" type="file" class="block w-full text-xs text-gray-500 mt-1 file:mr-4 file:py-1 file:px-4 file:rounded file:border-0 file:bg-blue-50 file:text-accent">
+                </div>
+
+                <div>
+                    <label class="text-xs font-bold text-gray-400 mb-2 block">SERVIÇOS HABILITADOS</label>
+                    <div class="grid grid-cols-2 gap-2 p-2 border rounded max-h-32 overflow-y-auto">
+                        {% for s in todos_servicos %}
+                        <label class="flex items-center text-sm cursor-pointer">
+                            <input type="checkbox" name="p-servicos" value="{{ s.id }}" class="mr-2" 
+                                ${dados.servicos.includes({{ s.id }}) ? 'checked' : ''}> {{ s.nome }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-xs font-bold text-gray-400 mb-2 block">JORNADA SEMANAL (ENTRADA/SAÍDA)</label>
+                    <div class="space-y-2">
+                        ${['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'].map(dia => {
+                            const diaCheck = dados.jornada[dia] ? 'checked' : '';
+                            const entVal = dados.jornada[dia]?.entrada || '09:00';
+                            const saiVal = dados.jornada[dia]?.saida || '18:00';
+                            return `
+                                <div class="flex items-center gap-2 bg-gray-50 p-2 rounded">
+                                    <input type="checkbox" id="check-${dia}" ${diaCheck} class="w-4 h-4">
+                                    <span class="w-8 text-[10px] font-bold uppercase">${dia}</span>
+                                    <input type="time" id="ini-${dia}" value="${entVal}" class="border rounded text-xs p-1">
+                                    <span class="text-gray-400">às</span>
+                                    <input type="time" id="fim-${dia}" value="${saiVal}" class="border rounded text-xs p-1">
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Salvar Alterações',
+        confirmButtonColor: '#3b82f6',
+        preConfirm: () => {
+            const fd = new FormData();
+            fd.append('nome', document.getElementById('p-nome').value);
+            fd.append('especialidade', document.getElementById('p-espec').value);
+            if(document.getElementById('p-foto').files[0]) fd.append('foto', document.getElementById('p-foto').files[0]);
+            
+            document.querySelectorAll('input[name="p-servicos"]:checked').forEach(cb => fd.append('servicos[]', cb.value));
+
+            let jornada = {};
+            ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'].forEach(dia => {
+                if(document.getElementById(`check-${dia}`).checked) {
+                    jornada[dia] = {
+                        entrada: document.getElementById(`ini-${dia}`).value,
+                        saida: document.getElementById(`fim-${dia}`).value
+                    };
+                }
+            });
+            fd.append('jornada', JSON.stringify(jornada));
+            return fd;
+        }
+    });
+
+    if (formValues) {
+        fetch(urlAction, {
+            method: 'POST',
+            headers: {'X-CSRFToken': '{{ csrf_token }}'},
+            body: formValues
+        }).then(() => location.reload());
+    }
+}
+
+function excluirProfissional(id) {
+    Swal.fire({
+        title: 'Tem certeza?',
+        text: "O profissional será removido permanentemente!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        confirmButtonText: 'Sim, excluir'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch(`/equipe/api/delete/${id}/`, {
+                method: 'POST',
+                headers: {'X-CSRFToken': '{{ csrf_token }}'}
+            }).then(() => location.reload());
+        }
+    });
+}
+</script>
+{% endblock %}

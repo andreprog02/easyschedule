@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+
+{% block title %}Painel de Controle - {{ empresa.nome }}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    
+    <div class="bg-white rounded-xl shadow-lg p-6 mb-8 flex flex-col md:flex-row justify-between items-center border border-gray-100">
+        <div class="flex items-center gap-4">
+            {% if empresa.logo %}
+                <img src="{{ empresa.logo.url }}" class="w-16 h-16 rounded-lg object-cover shadow-sm">
+            {% else %}
+                <div class="w-16 h-16 bg-accent rounded-lg flex items-center justify-center text-white text-2xl">
+                    <i class="fa-solid fa-shop"></i>
+                </div>
+            {% endif %}
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800">Olá, {{ user.first_name|default:user.username }}!</h1>
+                <p class="text-gray-500 text-sm">Gerenciando: <span class="font-semibold text-accent">{{ empresa.nome }}</span></p>
+            </div>
+        </div>
+        <div class="mt-4 md:mt-0 flex gap-3">
+            <a href="{% url 'agendamento_home' %}" target="_blank" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition shadow-md flex items-center">
+                <i class="fa-solid fa-external-link-alt mr-2"></i> Ver Site
+            </a>
+            <form action="{% url 'logout' %}" method="post" class="inline">
+                {% csrf_token %}
+                <button type="submit" class="bg-gray-100 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-200 transition flex items-center">
+                    <i class="fa-solid fa-right-from-bracket mr-2"></i> Sair
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+        <a href="{% url 'gestao_agendamentos' %}" class="bg-white p-6 rounded-xl shadow-md hover:shadow-xl transition transform hover:-translate-y-1 group border-l-4 border-accent">
+            <div class="flex items-center justify-between mb-4">
+                <div class="bg-blue-50 p-3 rounded-full text-accent group-hover:bg-accent group-hover:text-white transition">
+                    <i class="fa-solid fa-calendar-check text-xl"></i>
+                </div>
+                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Agenda</span>
+            </div>
+            <h3 class="text-lg font-bold text-gray-800">Ver Agendamentos</h3>
+            <p class="text-gray-500 text-xs mt-2 leading-relaxed">Visualize os horários marcados, confirme clientes e veja sua ocupação diária.</p>
+        </a>
+
+        <a href="{% url 'config_servicos' %}" class="bg-white p-6 rounded-xl shadow-md hover:shadow-xl transition transform hover:-translate-y-1 group border-l-4 border-purple-500">
+            <div class="flex items-center justify-between mb-4">
+                <div class="bg-purple-50 p-3 rounded-full text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition">
+                    <i class="fa-solid fa-list-check text-xl"></i>
+                </div>
+                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Catálogo</span>
+            </div>
+            <h3 class="text-lg font-bold text-gray-800">Serviços & Preços</h3>
+            <p class="text-gray-500 text-xs mt-2 leading-relaxed">Cadastre novos serviços, alterne categorias e defina o tempo de execução.</p>
+        </a>
+
+        <a href="{% url 'gestao_equipe' %}" class="bg-white p-6 rounded-xl shadow-md hover:shadow-xl transition transform hover:-translate-y-1 group border-l-4 border-green-500">
+            <div class="flex items-center justify-between mb-4">
+                <div class="bg-green-50 p-3 rounded-full text-green-600 group-hover:bg-green-600 group-hover:text-white transition">
+                    <i class="fa-solid fa-id-badge text-xl"></i>
+                </div>
+                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Equipe</span>
+            </div>
+            <h3 class="text-lg font-bold text-gray-800">Gestão de Equipe</h3>
+            <p class="text-gray-500 text-xs mt-2 leading-relaxed">Cadastre profissionais, defina especialidades e jornadas individuais de trabalho.</p>
+        </a>
+
+        <a href="{% url 'gestao_folgas' %}" class="bg-white p-6 rounded-xl shadow-md hover:shadow-xl transition transform hover:-translate-y-1 group border-l-4 border-red-500">
+            <div class="flex items-center justify-between mb-4">
+                <div class="bg-red-50 p-3 rounded-full text-red-600 group-hover:bg-red-600 group-hover:text-white transition">
+                    <i class="fa-solid fa-calendar-xmark text-xl"></i>
+                </div>
+                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Bloqueios</span>
+            </div>
+            <h3 class="text-lg font-bold text-gray-800">Folgas e Feriados</h3>
+            <p class="text-gray-500 text-xs mt-2 leading-relaxed">Bloqueie datas festivas, folgas coletivas ou férias individuais de funcionários.</p>
+        </a>
+
+        <a href="{% url 'config_empresa' %}" class="bg-white p-6 rounded-xl shadow-md hover:shadow-xl transition transform hover:-translate-y-1 group border-l-4 border-orange-500">
+            <div class="flex items-center justify-between mb-4">
+                <div class="bg-orange-50 p-3 rounded-full text-orange-600 group-hover:bg-orange-600 group-hover:text-white transition">
+                    <i class="fa-solid fa-gears text-xl"></i>
+                </div>
+                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Empresa</span>
+            </div>
+            <h3 class="text-lg font-bold text-gray-800">Configurações Gerais</h3>
+            <p class="text-gray-500 text-xs mt-2 leading-relaxed">Altere logotipo, telefone, endereço e os horários padrão da loja.</p>
+        </a>
+
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,254 @@
+{% extends 'base.html' %}
+
+{% block title %}Meus Serviços{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    
+    <div class="flex justify-between items-center mb-8">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">Catálogo de Serviços</h1>
+            <p class="text-gray-500 text-sm">Organize seus preços e tempos de atendimento.</p>
+        </div>
+        <div class="flex gap-2">
+            <a href="{% url 'dashboard' %}" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition">
+                <i class="fa-solid fa-arrow-left"></i> Voltar
+            </a>
+            <button onclick="novaCategoria()" class="bg-accent text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition shadow">
+                <i class="fa-solid fa-folder-plus mr-2"></i> Nova Categoria
+            </button>
+        </div>
+    </div>
+
+    <div id="lista-categorias" class="space-y-6">
+        {% for categoria in categorias %}
+        <div class="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100" id="cat-card-{{ categoria.id }}">
+            
+            <div class="bg-gray-50 px-6 py-4 flex justify-between items-center border-b border-gray-100">
+                <h3 class="text-lg font-bold text-gray-700">
+                    <i class="fa-solid fa-tag text-accent mr-2"></i> {{ categoria.nome }}
+                </h3>
+                <div class="flex items-center gap-2">
+                    <button onclick="novoServico('{{ categoria.id }}')" class="text-sm bg-white border border-gray-300 text-gray-700 px-3 py-1 rounded hover:bg-gray-50 transition">
+                        <i class="fa-solid fa-plus"></i> Add Serviço
+                    </button>
+                    <button onclick="excluirCategoria('{{ categoria.id }}')" class="text-red-400 hover:text-red-600 px-2 transition" title="Excluir Categoria">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="p-0">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="text-xs text-gray-500 bg-gray-50 uppercase border-b border-gray-100">
+                            <th class="px-6 py-3 font-medium">Nome do Serviço</th>
+                            <th class="px-6 py-3 font-medium">Preço (R$)</th>
+                            <th class="px-6 py-3 font-medium">Tempo (min)</th>
+                            <th class="px-6 py-3 font-medium text-right">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100" id="tbody-cat-{{ categoria.id }}">
+                        {% for servico in categoria.servicos.all %}
+                        <tr class="hover:bg-blue-50 transition group" id="servico-row-{{ servico.id }}">
+                            <td class="px-6 py-4 font-medium text-gray-800">{{ servico.nome }}</td>
+                            <td class="px-6 py-4 text-green-600 font-bold">R$ {{ servico.preco }}</td>
+                            <td class="px-6 py-4 text-gray-500"><i class="fa-regular fa-clock mr-1"></i> {{ servico.tempo_execucao }}</td>
+                            <td class="px-6 py-4 text-right">
+                                <button onclick="editarServico('{{ servico.id }}', '{{ servico.nome }}', '{{ servico.preco }}', '{{ servico.tempo_execucao }}')" 
+                                        class="text-blue-400 hover:text-blue-600 mr-3">
+                                    <i class="fa-solid fa-pen"></i>
+                                </button>
+                                <button onclick="excluirServico('{{ servico.id }}')" class="text-red-300 hover:text-red-500">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr id="empty-cat-{{ categoria.id }}">
+                            <td colspan="4" class="px-6 py-8 text-center text-gray-400 italic text-sm">
+                                Nenhum serviço cadastrado nesta categoria.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-12">
+            <div class="inline-block p-4 rounded-full bg-blue-50 text-accent mb-4">
+                <i class="fa-solid fa-folder-open text-4xl"></i>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900">Comece por aqui!</h3>
+            <p class="text-gray-500">Crie sua primeira categoria (ex: Cabelo, Barba) para adicionar serviços.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+    // --- Funções Auxiliares ---
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // --- 1. Nova Categoria ---
+    function novaCategoria() {
+        Swal.fire({
+            title: 'Nova Categoria',
+            input: 'text',
+            inputLabel: 'Nome da Categoria (ex: Barba, Cabelo)',
+            showCancelButton: true,
+            confirmButtonText: 'Salvar',
+            confirmButtonColor: '#3b82f6',
+            cancelButtonText: 'Cancelar',
+            inputValidator: (value) => {
+                if (!value) return 'Você precisa escrever um nome!'
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch("{% url 'api_add_categoria' %}", {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
+                    body: JSON.stringify({nome: result.value})
+                }).then(res => res.json()).then(data => {
+                    if(data.status === 'success') location.reload();
+                });
+            }
+        });
+    }
+
+    // --- 2. Excluir Categoria ---
+    function excluirCategoria(id) {
+        Swal.fire({
+            title: 'Tem certeza?',
+            text: "Todos os serviços desta categoria também serão apagados!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            confirmButtonText: 'Sim, excluir',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch(`/servicos/api/delete_categoria/${id}/`, {
+                    method: 'POST',
+                    headers: {'X-CSRFToken': getCookie('csrftoken')}
+                }).then(res => res.json()).then(data => {
+                    if(data.status === 'success') {
+                        document.getElementById(`cat-card-${id}`).remove();
+                        Swal.fire('Excluído!', '', 'success');
+                    }
+                });
+            }
+        })
+    }
+
+    // --- 3. Novo Serviço (Pop-up Complexo) ---
+    function novoServico(catId) {
+        Swal.fire({
+            title: 'Novo Serviço',
+            html: `
+                <input id="swal-nome" class="swal2-input" placeholder="Nome (ex: Corte Simples)">
+                <input id="swal-preco" type="number" step="0.01" class="swal2-input" placeholder="Preço (ex: 35.00)">
+                <input id="swal-tempo" type="number" class="swal2-input" placeholder="Tempo em minutos (ex: 30)">
+            `,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: 'Salvar',
+            confirmButtonColor: '#3b82f6',
+            preConfirm: () => {
+                return {
+                    categoria_id: catId,
+                    nome: document.getElementById('swal-nome').value,
+                    preco: document.getElementById('swal-preco').value,
+                    tempo: document.getElementById('swal-tempo').value
+                }
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const data = result.value;
+                if(!data.nome || !data.preco || !data.tempo) {
+                    Swal.fire('Erro', 'Preencha todos os campos', 'error');
+                    return;
+                }
+
+                fetch("{% url 'api_add_service' %}", {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
+                    body: JSON.stringify(data)
+                }).then(res => res.json()).then(resp => {
+                    if(resp.status === 'success') location.reload();
+                    else Swal.fire('Erro', resp.message, 'error');
+                });
+            }
+        });
+    }
+
+    // --- 4. Excluir Serviço ---
+    function excluirServico(id) {
+        Swal.fire({
+            title: 'Apagar serviço?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            confirmButtonText: 'Sim',
+            cancelButtonText: 'Não'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch(`/servicos/api/delete_service/${id}/`, {
+                    method: 'POST',
+                    headers: {'X-CSRFToken': getCookie('csrftoken')}
+                }).then(res => res.json()).then(data => {
+                    if(data.status === 'success') {
+                        document.getElementById(`servico-row-${id}`).remove();
+                    }
+                });
+            }
+        })
+    }
+
+    // --- 5. Editar Serviço ---
+    function editarServico(id, nome, preco, tempo) {
+        Swal.fire({
+            title: 'Editar Serviço',
+            html: `
+                <input id="swal-edit-nome" class="swal2-input" value="${nome}" placeholder="Nome">
+                <input id="swal-edit-preco" type="number" step="0.01" class="swal2-input" value="${preco}" placeholder="Preço">
+                <input id="swal-edit-tempo" type="number" class="swal2-input" value="${tempo}" placeholder="Tempo (min)">
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Atualizar',
+            confirmButtonColor: '#3b82f6',
+            preConfirm: () => {
+                return {
+                    nome: document.getElementById('swal-edit-nome').value,
+                    preco: document.getElementById('swal-edit-preco').value,
+                    tempo: document.getElementById('swal-edit-tempo').value
+                }
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch(`/servicos/api/edit_service/${id}/`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
+                    body: JSON.stringify(result.value)
+                }).then(res => res.json()).then(resp => {
+                    if(resp.status === 'success') location.reload();
+                });
+            }
+        });
+    }
+</script>
+{% endblock %}
