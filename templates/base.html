@@ -6,65 +6,67 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}EasySchedule{% endblock %}</title>
 
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        brand: '#1e293b',     /* Cor escura elegante */
-                        brandLight: '#334155',
-                        accent: '#3b82f6',    /* Azul destaque */
+                        accent: '#3b82f6', // Azul do design premium
+                        brand: '#1e293b',
+                        brandLight: '#f8fafc',
                     }
                 }
             }
         }
     </script>
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    <link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/dark.css">
-
-    <link href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-dark@4/dark.css" rel="stylesheet">
-    
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
-
     <style>
-        /* Ajustes finos para transições suaves */
-        .step-content { display: none; opacity: 0; transition: opacity 0.3s ease-in-out; }
-        .step-content.active { display: block; opacity: 1; }
-        .loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999; align-items: center; justify-content: center; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
+    
+    {% block head %}{% endblock %}
 </head>
-<body class="bg-gray-100 text-gray-800 font-sans antialiased min-h-screen flex flex-col">
+<body class="bg-brandLight text-slate-900">
 
-    <nav class="bg-brand text-white shadow-lg">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16 items-center">
-                <div class="flex-shrink-0 flex items-center gap-2">
-                    <i class="fa-solid fa-calendar-check text-accent text-2xl"></i>
-                    <span class="font-bold text-xl tracking-wide">EasySchedule</span>
-                </div>
-                <div class="hidden md:block">
-                    <a href="{% url 'admin:index' %}" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Área Administrativa</a>
-                </div>
-            </div>
+    <div id="global-loader" class="fixed inset-0 bg-white/80 z-[9999] hidden flex-col items-center justify-center">
+        <div class="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin"></div>
+        <p class="mt-4 text-accent font-bold animate-pulse uppercase tracking-widest text-xs">Processando...</p>
+    </div>
+
+    <nav class="bg-white border-b border-slate-100 py-4 mb-6">
+        <div class="max-w-7xl mx-auto px-4 flex justify-between items-center">
+            <a href="/" class="text-xl font-extrabold tracking-tighter text-slate-900 flex items-center gap-2">
+                <i class="fa-solid fa-calendar-check text-accent"></i> EasySchedule
+            </a>
+            {% if user.is_authenticated %}
+                <a href="{% url 'dashboard' %}" class="text-sm font-bold text-slate-500 hover:text-accent transition">Painel Admin</a>
+            {% endif %}
         </div>
     </nav>
 
-    <main class="flex-grow container mx-auto px-4 py-8">
-        {% block content %}
-        {% endblock %}
+    <main>
+        {% block content %}{% endblock %}
     </main>
 
-    <div id="global-loader" class="loading-overlay">
-        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-accent"></div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/5.0.8/jquery.inputmask.min.js"></script>
+    
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script src="https://npmcdn.com/flatpickr/dist/l10n/pt.js"></script> <script src="https://cdn.jsdelivr.net/npm/inputmask@5.0.8/dist/inputmask.min.js"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/pt.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     {% block scripts %}{% endblock %}
 </body>

@@ -36,6 +36,7 @@ def get_services(request):
 # 3. API: Retorna Profissionais
 def get_professionals(request):
     servico_id = request.GET.get('servico_id')
+    # Filtra profissionais que realizam o serviço selecionado
     profissionais = Profissional.objects.filter(servicos_realizados__id=servico_id)
     
     data = []
@@ -45,7 +46,7 @@ def get_professionals(request):
             'nome': p.nome,
             'especialidade': p.especialidade,
             'foto_url': p.foto.url if p.foto else None,
-            'jornada': p.jornada_config  # <-- O JS PRECISA DISTO PARA DESBLOQUEAR O PASSO 4
+            'jornada': p.jornada_config  # <-- Essencial para o bloqueio do calendário
         })
     return JsonResponse(data, safe=False)
 
