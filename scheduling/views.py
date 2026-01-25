@@ -45,7 +45,7 @@ def get_professionals(request):
             'nome': p.nome,
             'especialidade': p.especialidade,
             'foto_url': p.foto.url if p.foto else None,
-            'jornada': p.jornada_config  # <-- O JS PRECISA DISTO PARA BLOQUEAR O CALENDÁRIO
+            'jornada': p.jornada_config  # <-- O JS PRECISA DISTO PARA DESBLOQUEAR O PASSO 4
         })
     return JsonResponse(data, safe=False)
 
