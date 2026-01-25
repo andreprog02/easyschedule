@@ -1,6 +1,11 @@
 let calendarInstance = null;
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Máscara Premium de Telefone
+    const phoneInput = document.getElementById('client-phone');
+    if(phoneInput && typeof Inputmask !== "undefined") {
+        Inputmask("(99) 9 9999-9999").mask(phoneInput);
+    }
     initCalendar();
 });
 
@@ -26,8 +31,8 @@ function updateStepper(step) {
     for(let i = 1; i <= 5; i++) {
         const circle = document.getElementById(`circle-step-${i}`);
         if(circle) {
-            if(i <= step) circle.classList.add('step-indicator-active');
-            else circle.classList.remove('step-indicator-active');
+            if(i <= step) circle.classList.add('border-blue-500', 'text-blue-500', 'bg-blue-50');
+            else circle.classList.remove('border-blue-500', 'text-blue-500', 'bg-blue-50');
         }
     }
 }
@@ -42,9 +47,7 @@ function showStep(stepNumber) {
     }
 }
 
-function prevStep(targetStep) {
-    showStep(targetStep);
-}
+function prevStep(num) { showStep(num); }
 
 function selectCategory(id) {
     bookingState.categoriaId = id;
@@ -53,20 +56,16 @@ function selectCategory(id) {
         .then(res => res.json())
         .then(data => {
             const list = document.getElementById('services-list');
-            list.innerHTML = '';
-            data.forEach(s => {
-                const item = document.createElement('div');
-                item.className = "flex justify-between items-center p-6 bg-white border border-gray-100 rounded-3xl cursor-pointer hover:shadow-xl hover:border-accent transition-all group";
-                item.onclick = () => selectService(s.id, s.nome, s.preco, s.tempo);
-                item.innerHTML = `
+            list.innerHTML = data.map(s => `
+                <div onclick="selectService(${s.id}, '${s.nome}', '${s.preco}', '${s.tempo}')" 
+                     class="flex justify-between items-center p-6 bg-white border border-slate-100 rounded-[2rem] cursor-pointer hover:shadow-xl hover:border-blue-500 transition-all group">
                     <div>
-                        <h4 class="font-bold text-gray-800 group-hover:text-accent">${s.nome}</h4>
-                        <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">${s.tempo} MIN</span>
+                        <h4 class="font-bold text-slate-800 group-hover:text-blue-500 transition-colors">${s.nome}</h4>
+                        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1 inline-block">${s.tempo} min</span>
                     </div>
-                    <div class="text-xl font-black text-gray-900">R$ ${s.preco}</div>
-                `;
-                list.appendChild(item);
-            });
+                    <div class="text-xl font-black text-slate-900">R$ ${s.preco}</div>
+                </div>
+            `).join('');
             showLoader(false);
             showStep(2);
         });
@@ -77,87 +76,77 @@ function selectService(id, nome, preco, tempo) {
     bookingState.resumo.servico = nome;
     bookingState.resumo.preco = preco;
     showLoader(true);
-    
     fetch(`/api/get_professionals/?servico_id=${id}`)
         .then(res => res.json())
         .then(data => {
             const grid = document.getElementById('professionals-grid');
-            grid.innerHTML = '';
-            
-            data.forEach(p => {
+            grid.innerHTML = data.map(p => {
                 const photo = p.foto_url || `https://ui-avatars.com/api/?name=${p.nome}&background=3b82f6&color=fff&bold=true`;
-                const card = document.createElement('div');
-                card.className = "flex items-center p-6 bg-white border border-gray-100 rounded-[2rem] cursor-pointer hover:shadow-xl hover:border-accent transition-all group";
-                
-                // Passa a jornada diretamente para a função sem converter para string no HTML
-                card.onclick = () => selectProfessional(p.id, p.nome, p.jornada || {});
-                
-                card.innerHTML = `
-                    <img src="${photo}" class="w-16 h-16 rounded-2xl object-cover shadow-sm group-hover:scale-105 transition-transform">
+                const jornadaStr = JSON.stringify(p.jornada || {});
+                return `
+                <div onclick='selectProfessional(${p.id}, "${p.nome}", ${jornadaStr})' 
+                     class="flex items-center p-6 bg-white border border-slate-100 rounded-[2rem] cursor-pointer hover:shadow-xl hover:border-blue-500 transition-all group">
+                    <img src="${photo}" class="w-14 h-14 rounded-2xl object-cover shadow-sm group-hover:scale-105 transition-transform">
                     <div class="ml-5">
-                        <h4 class="font-black text-gray-800 group-hover:text-accent">${p.nome}</h4>
-                        <p class="text-[10px] text-accent font-black uppercase tracking-widest mt-1">${p.especialidade || 'Especialista'}</p>
+                        <h4 class="font-bold text-slate-800 group-hover:text-blue-500 transition-colors">${p.nome}</h4>
+                        <p class="text-[11px] text-blue-500 font-bold uppercase tracking-widest">${p.especialidade || 'Especialista'}</p>
                     </div>
-                `;
-                grid.appendChild(card);
-            });
+                </div>`;
+            }).join('');
             showLoader(false);
             showStep(3);
-        })
-        .catch(() => showLoader(false));
+        }).catch(() => showLoader(false));
 }
 
 function selectProfessional(id, nome, jornada) {
     bookingState.profissionalId = id;
     bookingState.resumo.profissional = nome;
     
-    // Configuração do Bloqueio de Calendário
+    // BLOQUEIO INTELIGENTE NO CALENDÁRIO
     const dayMap = { 'dom': 0, 'seg': 1, 'ter': 2, 'qua': 3, 'qui': 4, 'sex': 5, 'sab': 6 };
     const workingDays = Object.keys(jornada).map(day => dayMap[day]);
 
     if(calendarInstance) {
         calendarInstance.set('enable', [
-            function(date) {
-                return workingDays.includes(date.getDay());
-            }
+            function(date) { return workingDays.includes(date.getDay()); }
         ]);
     }
     showStep(4);
 }
 
 function initCalendar() {
-    const calEl = document.getElementById('calendar-inline');
-    if(calEl) {
-        calendarInstance = flatpickr(calEl, {
-            inline: true,
-            minDate: "today",
-            locale: "pt",
-            onChange: (selectedDates, dateStr) => fetchTimeSlots(dateStr)
-        });
-    }
+    calendarInstance = flatpickr("#calendar-inline", {
+        inline: true,
+        minDate: "today",
+        locale: "pt",
+        onChange: (selectedDates, dateStr) => fetchTimeSlots(dateStr)
+    });
 }
 
 function fetchTimeSlots(dateStr) {
     bookingState.data = dateStr;
     const container = document.getElementById('time-slots');
-    container.innerHTML = '<div class="col-span-2 text-center py-10 animate-pulse text-gray-400 font-bold text-[10px]">CONSULTANDO...</div>';
+    container.innerHTML = '<div class="col-span-2 text-center py-10 animate-pulse text-slate-300 font-bold text-[11px] uppercase tracking-widest">Consultando Agenda...</div>';
 
     fetch(`/api/get_slots/?data=${dateStr}&profissional=${bookingState.profissionalId}&servico=${bookingState.servicoId}`)
         .then(res => res.json())
         .then(data => {
-            container.innerHTML = '';
             if(!data.slots || data.slots.length === 0) {
-                container.innerHTML = '<div class="col-span-2 text-center py-10 text-red-400 font-bold">Sem horários.</div>';
+                container.innerHTML = '<div class="col-span-2 py-12 text-center text-red-400 font-bold">Lamentamos, sem horários livres.</div>';
                 return;
             }
-            data.slots.forEach(slot => {
-                const btn = document.createElement('button');
-                btn.className = `py-4 border rounded-2xl font-black text-xs transition-all duration-300 shadow-sm ${slot.disponivel ? "bg-white border-gray-100 text-gray-700 hover:bg-accent hover:text-white" : "bg-gray-50 border-transparent text-gray-300 line-through cursor-not-allowed opacity-50"}`;
-                btn.innerText = slot.hora;
-                if(slot.disponivel) btn.onclick = () => selectTime(slot.hora);
-                else btn.disabled = true;
-                container.appendChild(btn);
-            });
+            container.innerHTML = data.slots.map(slot => {
+                const available = slot.disponivel;
+                const btnClass = available 
+                    ? "bg-white border-slate-100 text-slate-700 hover:bg-blue-600 hover:text-white hover:shadow-lg" 
+                    : "bg-slate-50 border-transparent text-slate-300 line-through cursor-not-allowed opacity-50";
+                
+                return `
+                <button ${available ? `onclick="selectTime('${slot.hora}')"` : 'disabled'} 
+                        class="py-4 border rounded-2xl font-bold text-sm ${btnClass}">
+                    ${slot.hora}
+                </button>`;
+            }).join('');
         });
 }
 
@@ -175,7 +164,7 @@ function confirmBooking() {
     const telefone = document.getElementById('client-phone').value;
 
     if (!nome || !telefone) {
-        Swal.fire('Atenção', 'Preencha o nome e WhatsApp.', 'warning');
+        Swal.fire('Atenção', 'Preencha o nome e o WhatsApp.', 'warning');
         return;
     }
 
@@ -196,7 +185,7 @@ function confirmBooking() {
     .then(data => {
         showLoader(false);
         if(data.status === 'success') {
-            Swal.fire('Sucesso!', 'Agendamento realizado!', 'success').then(() => location.reload());
+            Swal.fire('Agendado!', 'Seu horário foi reservado.', 'success').then(() => location.reload());
         } else {
             Swal.fire('Erro', data.message, 'error');
         }
