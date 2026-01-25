@@ -13,6 +13,11 @@ const bookingState = {
     resumo: {}
 };
 
+function showLoader(show) {
+    const loader = document.getElementById('global-loader');
+    if(loader) loader.style.display = show ? 'flex' : 'none';
+}
+
 function updateStepper(step) {
     const progress = (step - 1) * 25;
     document.getElementById('progress-bar').style.width = `${progress}%`;
@@ -32,9 +37,13 @@ function showStep(stepNumber) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+function prevStep(targetStep) {
+    showStep(targetStep);
+}
+
 function selectCategory(id) {
     bookingState.categoriaId = id;
-    toggleLoader(true);
+    showLoader(true);
     fetch(`/api/get_services/?categoria_id=${id}`)
         .then(res => res.json())
         .then(data => {
@@ -53,7 +62,7 @@ function selectCategory(id) {
                 `;
                 list.appendChild(item);
             });
-            toggleLoader(false);
+            showLoader(false);
             showStep(2);
         });
 }
@@ -62,7 +71,7 @@ function selectService(id, nome, preco, tempo) {
     bookingState.servicoId = id;
     bookingState.resumo.servico = nome;
     bookingState.resumo.preco = preco;
-    toggleLoader(true);
+    showLoader(true);
     fetch(`/api/get_professionals/?servico_id=${id}`)
         .then(res => res.json())
         .then(data => {
@@ -82,7 +91,7 @@ function selectService(id, nome, preco, tempo) {
                 `;
                 grid.appendChild(card);
             });
-            toggleLoader(false);
+            showLoader(false);
             showStep(3);
         });
 }
@@ -91,7 +100,7 @@ function selectProfessional(id, nome, jornada) {
     bookingState.profissionalId = id;
     bookingState.resumo.profissional = nome;
     
-    // BLOQUEIO DO CALENDÁRIO: Filtra os dias de trabalho (0=Dom, 1=Seg...)
+    // Bloqueia dias no calendário com base na jornada enviada pelo Django
     const dayMap = { 'dom': 0, 'seg': 1, 'ter': 2, 'qua': 3, 'qui': 4, 'sex': 5, 'sab': 6 };
     const workingDays = Object.keys(jornada).map(day => dayMap[day]);
 
@@ -121,7 +130,7 @@ function fetchTimeSlots(dateStr) {
         .then(res => res.json())
         .then(data => {
             container.innerHTML = '';
-            if(data.slots.length === 0) {
+            if(!data.slots || data.slots.length === 0) {
                 container.innerHTML = '<div class="col-span-2 text-center py-10 text-red-400 font-bold">Sem horários.</div>';
                 return;
             }
@@ -145,9 +154,37 @@ function selectTime(hora) {
     showStep(5);
 }
 
-function toggleLoader(show) {
-    const loader = document.getElementById('global-loader');
-    if(loader) loader.style.display = show ? 'flex' : 'none';
+function confirmBooking() {
+    const nome = document.getElementById('client-name').value;
+    const telefone = document.getElementById('client-phone').value;
+
+    if (!nome || !telefone) {
+        Swal.fire('Atenção', 'Preencha o nome e WhatsApp.', 'warning');
+        return;
+    }
+
+    showLoader(true);
+    fetch('/api/confirm_booking/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+        body: JSON.stringify({
+            profissional_id: bookingState.profissionalId,
+            servico_id: bookingState.servicoId,
+            data: bookingState.data,
+            hora: bookingState.hora,
+            cliente_nome: nome,
+            cliente_telefone: telefone
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        showLoader(false);
+        if(data.status === 'success') {
+            Swal.fire('Sucesso!', 'Agendamento realizado!', 'success').then(() => location.reload());
+        } else {
+            Swal.fire('Erro', data.message, 'error');
+        }
+    });
 }
 
 function getCookie(name) {
