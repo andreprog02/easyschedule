@@ -46,7 +46,7 @@ def get_professionals(request):
             'nome': p.nome,
             'especialidade': p.especialidade,
             'foto_url': p.foto.url if p.foto else None,
-            'jornada': p.jornada_config  # <-- INFORMAÇÃO QUE O JS PRECISA PARA BLOQUEAR DIAS
+            'jornada': p.jornada_config  # <-- O JS PRECISA DISTO PARA AVANÇAR
         })
     return JsonResponse(data, safe=False)
 

@@ -20,7 +20,9 @@ function showLoader(show) {
 
 function updateStepper(step) {
     const progress = (step - 1) * 25;
-    document.getElementById('progress-bar').style.width = `${progress}%`;
+    const bar = document.getElementById('progress-bar');
+    if(bar) bar.style.width = `${progress}%`;
+    
     for(let i = 1; i <= 5; i++) {
         const circle = document.getElementById(`circle-step-${i}`);
         if(circle) {
@@ -32,9 +34,12 @@ function updateStepper(step) {
 
 function showStep(stepNumber) {
     document.querySelectorAll('.step-content').forEach(el => el.classList.remove('active'));
-    document.getElementById(`step-${stepNumber}`).classList.add('active');
-    updateStepper(stepNumber);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    const target = document.getElementById(`step-${stepNumber}`);
+    if(target) {
+        target.classList.add('active');
+        updateStepper(stepNumber);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 }
 
 function prevStep(targetStep) {
@@ -72,59 +77,70 @@ function selectService(id, nome, preco, tempo) {
     bookingState.resumo.servico = nome;
     bookingState.resumo.preco = preco;
     showLoader(true);
+    
     fetch(`/api/get_professionals/?servico_id=${id}`)
         .then(res => res.json())
         .then(data => {
             const grid = document.getElementById('professionals-grid');
             grid.innerHTML = '';
+            
             data.forEach(p => {
                 const photo = p.foto_url || `https://ui-avatars.com/api/?name=${p.nome}&background=3b82f6&color=fff&bold=true`;
                 const card = document.createElement('div');
                 card.className = "flex items-center p-6 bg-white border border-gray-100 rounded-[2rem] cursor-pointer hover:shadow-xl hover:border-accent transition-all group";
+                
+                // Passa a jornada diretamente para a função sem converter para string no HTML
                 card.onclick = () => selectProfessional(p.id, p.nome, p.jornada || {});
+                
                 card.innerHTML = `
                     <img src="${photo}" class="w-16 h-16 rounded-2xl object-cover shadow-sm group-hover:scale-105 transition-transform">
                     <div class="ml-5">
                         <h4 class="font-black text-gray-800 group-hover:text-accent">${p.nome}</h4>
-                        <p class="text-[10px] text-accent font-black uppercase tracking-widest">${p.especialidade || 'Especialista'}</p>
+                        <p class="text-[10px] text-accent font-black uppercase tracking-widest mt-1">${p.especialidade || 'Especialista'}</p>
                     </div>
                 `;
                 grid.appendChild(card);
             });
             showLoader(false);
             showStep(3);
-        });
+        })
+        .catch(() => showLoader(false));
 }
 
 function selectProfessional(id, nome, jornada) {
     bookingState.profissionalId = id;
     bookingState.resumo.profissional = nome;
     
-    // Bloqueia dias no calendário com base na jornada enviada pelo Django
+    // Configuração do Bloqueio de Calendário
     const dayMap = { 'dom': 0, 'seg': 1, 'ter': 2, 'qua': 3, 'qui': 4, 'sex': 5, 'sab': 6 };
     const workingDays = Object.keys(jornada).map(day => dayMap[day]);
 
-    calendarInstance.set('enable', [
-        function(date) {
-            return workingDays.includes(date.getDay());
-        }
-    ]);
+    if(calendarInstance) {
+        calendarInstance.set('enable', [
+            function(date) {
+                return workingDays.includes(date.getDay());
+            }
+        ]);
+    }
     showStep(4);
 }
 
 function initCalendar() {
-    calendarInstance = flatpickr("#calendar-inline", {
-        inline: true,
-        minDate: "today",
-        locale: "pt",
-        onChange: (selectedDates, dateStr) => fetchTimeSlots(dateStr)
-    });
+    const calEl = document.getElementById('calendar-inline');
+    if(calEl) {
+        calendarInstance = flatpickr(calEl, {
+            inline: true,
+            minDate: "today",
+            locale: "pt",
+            onChange: (selectedDates, dateStr) => fetchTimeSlots(dateStr)
+        });
+    }
 }
 
 function fetchTimeSlots(dateStr) {
     bookingState.data = dateStr;
     const container = document.getElementById('time-slots');
-    container.innerHTML = '<div class="col-span-2 text-center py-10 animate-pulse text-gray-400 font-bold text-[10px]">CONSULTANDO AGENDA...</div>';
+    container.innerHTML = '<div class="col-span-2 text-center py-10 animate-pulse text-gray-400 font-bold text-[10px]">CONSULTANDO...</div>';
 
     fetch(`/api/get_slots/?data=${dateStr}&profissional=${bookingState.profissionalId}&servico=${bookingState.servicoId}`)
         .then(res => res.json())
