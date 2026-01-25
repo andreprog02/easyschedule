@@ -1,170 +1,159 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Agendamento Online | {{ empresa.nome }}{% endblock %}
+{% block title %}Reserva Premium | {{ empresa.nome }}{% endblock %}
 
 {% block content %}
-<div class="max-w-5xl mx-auto px-4 py-8">
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; }
     
-    <div class="text-center mb-10 animate-fade-in">
+    .step-content { display: none; }
+    .step-content.active { display: block; animation: slideUp 0.4s ease-out; }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Custom Flatpickr Premium */
+    .flatpickr-calendar { background: #fff !important; border: none !important; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.05) !important; border-radius: 24px !important; padding: 10px !important; width: 100% !important; }
+    .flatpickr-day.selected { background: #3b82f6 !important; border-color: #3b82f6 !important; border-radius: 12px !important; }
+    .flatpickr-day { border-radius: 12px !important; color: #475569 !important; font-weight: 600 !important; }
+    .flatpickr-day.flatpickr-disabled { color: #cbd5e1 !important; }
+    .flatpickr-weekday { font-weight: 700 !important; color: #94a3b8 !important; }
+
+    .btn-time { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    .btn-time:hover:not(:disabled) { transform: scale(1.05); }
+</style>
+
+<div class="max-w-5xl mx-auto px-4 py-12">
+    
+    <div class="text-center mb-12">
         {% if empresa.logo %}
-            <img src="{{ empresa.logo.url }}" class="h-20 mx-auto mb-4 rounded-2xl shadow-sm border border-gray-100">
+            <img src="{{ empresa.logo.url }}" class="h-16 mx-auto mb-6 rounded-2xl shadow-sm border border-white">
         {% endif %}
-        <h1 class="text-3xl font-black text-gray-900 tracking-tight">{{ empresa.nome }}</h1>
-        <p class="text-gray-500 font-medium mt-1 text-sm">Reserva o teu horário em poucos segundos</p>
+        <h1 class="text-3xl font-extrabold text-slate-900">{{ empresa.nome }}</h1>
+        <p class="text-slate-500 font-medium mt-2">Agendamento rápido em 5 passos</p>
     </div>
 
-    <div class="mb-12 relative max-w-2xl mx-auto">
-        <div class="flex items-center justify-between relative z-10">
+    <div class="max-w-2xl mx-auto mb-16 relative">
+        <div class="flex justify-between items-center relative z-10">
             {% for step in "12345" %}
             <div class="flex flex-col items-center">
-                <div id="circle-step-{{ step }}" class="w-10 h-10 rounded-full flex items-center justify-center border-2 border-gray-200 bg-white text-gray-400 font-bold transition-all duration-500">
+                <div id="circle-step-{{ step }}" class="w-12 h-12 rounded-full bg-white border-2 border-slate-100 flex items-center justify-center font-bold text-slate-300 transition-all duration-500 shadow-sm">
                     {{ step }}
                 </div>
             </div>
             {% endfor %}
         </div>
-        <div class="absolute top-5 left-0 w-full h-0.5 bg-gray-200 -z-0">
-            <div id="progress-bar" class="h-full bg-accent transition-all duration-500 ease-out" style="width: 0%"></div>
+        <div class="absolute top-6 left-0 w-full h-1 bg-slate-100 -z-0 rounded-full">
+            <div id="progress-bar" class="h-full bg-blue-500 transition-all duration-700 ease-in-out rounded-full" style="width: 0%"></div>
         </div>
     </div>
 
-    <div class="bg-white rounded-[2.5rem] shadow-2xl shadow-blue-100/50 border border-gray-50 min-h-[550px] relative overflow-hidden flex flex-col transition-all">
+    <div class="bg-white rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/50 min-h-[600px] overflow-hidden flex flex-col">
         
-        <div id="step-1" class="step-content active p-8 md:p-12">
-            <h2 class="text-2xl font-bold text-gray-800 mb-8 flex items-center gap-3">
-                <span class="w-2 h-8 bg-accent rounded-full"></span> O que vamos fazer hoje?
-            </h2>
+        <div id="step-1" class="step-content active p-10 md:p-16">
+            <h2 class="text-2xl font-bold text-slate-800 mb-10">O que vamos fazer hoje?</h2>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {% for categoria in categorias %}
                 <button onclick="selectCategory('{{ categoria.id }}')" 
-                        class="group p-8 bg-white border border-gray-100 rounded-3xl hover:border-accent hover:shadow-xl hover:-translate-y-1 transition-all duration-300 text-left">
-                    <div class="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center text-accent group-hover:bg-accent group-hover:text-white transition-colors mb-6 shadow-sm">
+                        class="group p-8 bg-white border border-slate-100 rounded-[2rem] hover:border-blue-500 hover:shadow-xl hover:shadow-blue-50 transition-all duration-300 text-left">
+                    <div class="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all mb-6">
                         <i class="fa-solid fa-scissors text-2xl"></i>
                     </div>
-                    <span class="block font-black text-gray-800 text-xl">{{ categoria.nome }}</span>
-                    <span class="text-sm text-gray-400 font-medium">Ver opções</span>
+                    <span class="block font-bold text-slate-800 text-xl">{{ categoria.nome }}</span>
+                    <span class="text-sm text-slate-400 font-medium mt-1 inline-block">Explorar opções</span>
                 </button>
                 {% endfor %}
             </div>
         </div>
 
-        <div id="step-2" class="step-content p-8 md:p-12">
-            <button onclick="prevStep(1)" class="mb-8 flex items-center text-xs font-black text-gray-400 hover:text-accent tracking-widest uppercase transition-colors">
-                <i class="fa-solid fa-chevron-left mr-2 text-[10px]"></i> Voltar
+        <div id="step-2" class="step-content p-10 md:p-16">
+            <button onclick="prevStep(1)" class="mb-8 text-xs font-bold text-slate-400 hover:text-blue-500 flex items-center gap-2 uppercase tracking-widest">
+                <i class="fa-solid fa-arrow-left"></i> Voltar
             </button>
-            <h2 class="text-2xl font-bold text-gray-800 mb-8">Escolha o serviço ideal</h2>
-            <div id="services-list" class="grid gap-4 max-w-3xl">
-                </div>
+            <h2 class="text-2xl font-bold text-slate-800 mb-10">Selecione o serviço</h2>
+            <div id="services-list" class="grid gap-4 max-w-3xl"></div>
         </div>
 
-        <div id="step-3" class="step-content p-8 md:p-12">
-            <button onclick="prevStep(2)" class="mb-8 flex items-center text-xs font-black text-gray-400 hover:text-accent tracking-widest uppercase">
-                <i class="fa-solid fa-chevron-left mr-2"></i> Voltar
+        <div id="step-3" class="step-content p-10 md:p-16">
+            <button onclick="prevStep(2)" class="mb-8 text-xs font-bold text-slate-400 hover:text-blue-500 flex items-center gap-2 uppercase tracking-widest">
+                <i class="fa-solid fa-arrow-left"></i> Voltar
             </button>
-            <h2 class="text-2xl font-bold text-gray-800 mb-8">Com qual especialista?</h2>
-            <div id="professionals-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                </div>
+            <h2 class="text-2xl font-bold text-slate-800 mb-10">Com qual especialista?</h2>
+            <div id="professionals-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-6"></div>
         </div>
 
-        <div id="step-4" class="step-content p-8 md:p-12">
-            <button onclick="prevStep(3)" class="mb-8 flex items-center text-xs font-black text-gray-400 hover:text-accent tracking-widest uppercase">
-                <i class="fa-solid fa-chevron-left mr-2"></i> Voltar
+        <div id="step-4" class="step-content p-10 md:p-16">
+            <button onclick="prevStep(3)" class="mb-8 text-xs font-bold text-slate-400 hover:text-blue-500 flex items-center gap-2 uppercase tracking-widest">
+                <i class="fa-solid fa-arrow-left"></i> Voltar
             </button>
             
-            <div class="flex flex-col lg:flex-row gap-12">
+            <div class="flex flex-col lg:flex-row gap-16">
                 <div class="w-full lg:w-3/5">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-6">Escolha o melhor dia</h2>
+                    <h2 class="text-2xl font-bold text-slate-800 mb-8">Escolha a data</h2>
                     <input type="text" id="calendar-inline" class="hidden">
                 </div>
                 
                 <div class="w-full lg:w-2/5 flex flex-col">
-                    <div class="flex items-center justify-between mb-6">
-                        <h3 class="font-black text-gray-400 uppercase tracking-widest text-[10px]" id="selected-date-display">Horários Disponíveis</h3>
-                        <span class="text-[10px] bg-green-50 text-green-600 px-2 py-1 rounded-full font-bold">LIVRE</span>
+                    <div class="flex items-center justify-between mb-8">
+                        <h3 class="font-bold text-slate-400 uppercase tracking-widest text-[11px]" id="selected-date-display">Horários do dia</h3>
+                        <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
                     </div>
-                    <div id="time-slots" class="grid grid-cols-2 gap-3 max-h-[380px] overflow-y-auto pr-2 custom-scrollbar">
-                        <div class="col-span-2 py-12 text-center text-gray-300 border-2 border-dashed border-gray-100 rounded-3xl">
-                            Seleciona um dia no calendário...
+                    <div id="time-slots" class="grid grid-cols-2 gap-4 max-h-[400px] overflow-y-auto pr-3 custom-scrollbar">
+                        <div class="col-span-2 py-16 text-center text-slate-300 border-2 border-dashed border-slate-50 rounded-[2rem]">
+                            Selecione um dia no calendário
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div id="step-5" class="step-content p-8 md:p-12">
-            <button onclick="prevStep(4)" class="mb-8 flex items-center text-xs font-black text-gray-400 hover:text-accent tracking-widest uppercase">
-                <i class="fa-solid fa-chevron-left mr-2"></i> Voltar
+        <div id="step-5" class="step-content p-10 md:p-16">
+            <button onclick="prevStep(4)" class="mb-8 text-xs font-bold text-slate-400 hover:text-blue-500 flex items-center gap-2 uppercase tracking-widest">
+                <i class="fa-solid fa-arrow-left"></i> Voltar
             </button>
             
-            <div class="grid md:grid-cols-2 gap-12">
+            <div class="grid md:grid-cols-2 gap-16">
                 <div>
-                    <h2 class="text-2xl font-bold text-gray-800 mb-8">Confirmar Agendamento</h2>
-                    <div class="space-y-6">
-                        <div class="relative">
-                            <label class="text-[10px] font-black text-gray-400 absolute top-3 left-5 tracking-widest uppercase">Teu Nome</label>
-                            <input type="text" id="client-name" required class="w-full pt-8 pb-4 px-5 bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-2 focus:ring-accent transition-all outline-none text-gray-800 font-bold">
+                    <h2 class="text-2xl font-bold text-slate-800 mb-10">Dados do agendamento</h2>
+                    <div class="space-y-8">
+                        <div class="group">
+                            <label class="block text-[11px] font-bold text-slate-400 uppercase mb-3 tracking-widest">Seu Nome Completo</label>
+                            <input type="text" id="client-name" class="w-full px-6 py-4 bg-slate-50 border-transparent rounded-2xl focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none font-semibold text-slate-700">
                         </div>
-                        <div class="relative">
-                            <label class="text-[10px] font-black text-gray-400 absolute top-3 left-5 tracking-widest uppercase">Teu WhatsApp</label>
-                            <input type="text" id="client-phone" required class="w-full pt-8 pb-4 px-5 bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-2 focus:ring-accent transition-all outline-none text-gray-800 font-bold">
+                        <div class="group">
+                            <label class="block text-[11px] font-bold text-slate-400 uppercase mb-3 tracking-widest">WhatsApp (Com DDD)</label>
+                            <input type="text" id="client-phone" placeholder="(00) 0 0000-0000" class="w-full px-6 py-4 bg-slate-50 border-transparent rounded-2xl focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none font-semibold text-slate-700">
                         </div>
                     </div>
-                    <button type="button" onclick="confirmBooking()" class="w-full bg-accent text-white font-black py-6 rounded-2xl hover:bg-blue-600 transition-all shadow-xl shadow-blue-100 mt-10 flex items-center justify-center gap-3 group">
-                        CONFIRMAR E AGENDAR <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                    <button type="button" onclick="confirmBooking()" class="w-full bg-blue-600 text-white font-bold py-5 rounded-2xl hover:bg-blue-700 transition-all shadow-xl shadow-blue-200 mt-12 flex items-center justify-center gap-3">
+                        FINALIZAR AGENDAMENTO <i class="fa-solid fa-circle-check"></i>
                     </button>
                 </div>
 
-                <div class="bg-gray-50 rounded-[2.5rem] p-10 border border-gray-100">
-                    <h4 class="font-black text-gray-900 text-lg mb-8 border-b pb-4">Detalhes da Reserva</h4>
+                <div class="bg-slate-50 rounded-[2.5rem] p-10 border border-slate-100">
+                    <h4 class="font-bold text-slate-800 text-lg mb-8 border-b border-slate-200 pb-4">Resumo da Reserva</h4>
                     <ul class="space-y-6">
-                        <li class="flex justify-between items-center">
-                            <span class="text-gray-500 font-medium">Serviço</span>
-                            <span id="summary-service" class="font-black text-gray-800">-</span>
+                        <li class="flex justify-between items-center text-sm">
+                            <span class="text-slate-500 font-medium">Serviço</span>
+                            <span id="summary-service" class="font-bold text-slate-800">-</span>
                         </li>
-                        <li class="flex justify-between items-center">
-                            <span class="text-gray-500 font-medium">Especialista</span>
-                            <span id="summary-professional" class="font-black text-gray-800">-</span>
+                        <li class="flex justify-between items-center text-sm">
+                            <span class="text-slate-500 font-medium">Profissional</span>
+                            <span id="summary-professional" class="font-bold text-slate-800">-</span>
                         </li>
-                        <li class="flex justify-between items-center">
-                            <span class="text-gray-500 font-medium">Data e Hora</span>
-                            <span id="summary-datetime" class="font-black text-accent">-</span>
+                        <li class="flex justify-between items-center text-sm">
+                            <span class="text-slate-500 font-medium">Data e Hora</span>
+                            <span id="summary-datetime" class="font-bold text-blue-600">-</span>
                         </li>
-                        <li class="flex justify-between items-center pt-4 border-t border-gray-200">
-                            <span class="text-gray-900 font-black text-xl">Preço Estimado</span>
-                            <span id="summary-price" class="text-3xl font-black text-gray-900">R$ 0,00</span>
+                        <li class="flex justify-between items-center pt-6 border-t border-slate-200">
+                            <span class="text-slate-900 font-bold text-xl">Preço</span>
+                            <span id="summary-price" class="text-3xl font-black text-slate-900">R$ 0,00</span>
                         </li>
                     </ul>
                 </div>
             </div>
         </div>
+
     </div>
 </div>
-
-<style>
-    /* Estilos Premium para o Calendário Flatpickr */
-    .flatpickr-calendar { box-shadow: none !important; border: none !important; background: #f8fafc !important; border-radius: 2rem !important; padding: 1.5rem !important; width: 100% !important; max-width: 100% !important; }
-    .flatpickr-day.selected { background: #3b82f6 !important; border-color: #3b82f6 !important; border-radius: 1rem !important; box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.4); }
-    .flatpickr-day { border-radius: 1rem !important; height: 50px !important; line-height: 50px !important; font-weight: 700 !important; color: #1e293b !important; }
-    .flatpickr-day.flatpickr-disabled { color: #cbd5e1 !important; opacity: 0.4; pointer-events: none; }
-    .flatpickr-weekday { font-weight: 800 !important; color: #94a3b8 !important; text-transform: uppercase; font-size: 10px; }
-    
-    /* Configuração de Visibilidade das Etapas */
-    .step-content { display: none; opacity: 0; transform: translateY(10px); }
-    .step-content.active { display: block; opacity: 1; transform: translateY(0); animation: fadeIn 0.5s ease-out forwards; }
-    
-    /* Indicadores do Stepper */
-    .step-indicator-active { border-color: #3b82f6 !important; background: #3b82f6 !important; color: white !important; transform: scale(1.1); box-shadow: 0 0 20px rgba(59, 130, 246, 0.3); }
-    
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-    
-    /* Scrollbar Personalizada */
-    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-</style>
-{% endblock %}
-
-{% block scripts %}
-<script src="{% static 'js/agendamento.js' %}"></script>
 {% endblock %}
