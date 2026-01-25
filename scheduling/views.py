@@ -36,8 +36,18 @@ def get_services(request):
 # 3. API: Retorna Profissionais
 def get_professionals(request):
     servico_id = request.GET.get('servico_id')
+    # Filtra profissionais que realizam o serviço selecionado
     profissionais = Profissional.objects.filter(servicos_realizados__id=servico_id)
-    data = [{'id': p.id, 'nome': p.nome, 'especialidade': p.especialidade, 'foto_url': p.foto.url if p.foto else None} for p in profissionais]
+    
+    data = []
+    for p in profissionais:
+        data.append({
+            'id': p.id,
+            'nome': p.nome,
+            'especialidade': p.especialidade,
+            'foto_url': p.foto.url if p.foto else None,
+            'jornada': p.jornada_config  # <-- INFORMAÇÃO QUE O JS PRECISA PARA BLOQUEAR DIAS
+        })
     return JsonResponse(data, safe=False)
 
 # 4. API: O Cérebro (Calcula Horários Livres) - CORRIGIDO

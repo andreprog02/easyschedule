@@ -1,15 +1,9 @@
-document.addEventListener('DOMContentLoaded', function() {
-    // Inicializa Máscara de Telefone
-    const phoneInput = document.getElementById('client-phone');
-    if(phoneInput) {
-        Inputmask("(99) 9 9999-9999").mask(phoneInput);
-    }
+let calendarInstance = null;
 
-    // Inicializa o Calendário (Flatpickr)
+document.addEventListener('DOMContentLoaded', function() {
     initCalendar();
 });
 
-// --- Estado Global do Agendamento ---
 const bookingState = {
     categoriaId: null,
     servicoId: null,
@@ -19,122 +13,125 @@ const bookingState = {
     resumo: {}
 };
 
-// --- Navegação entre Passos ---
+function updateStepper(step) {
+    const progress = (step - 1) * 25;
+    document.getElementById('progress-bar').style.width = `${progress}%`;
+    for(let i = 1; i <= 5; i++) {
+        const circle = document.getElementById(`circle-step-${i}`);
+        if(circle) {
+            if(i <= step) circle.classList.add('step-indicator-active');
+            else circle.classList.remove('step-indicator-active');
+        }
+    }
+}
+
 function showStep(stepNumber) {
     document.querySelectorAll('.step-content').forEach(el => el.classList.remove('active'));
-    const currentStep = document.getElementById(`step-${stepNumber}`);
-    if(currentStep) currentStep.classList.add('active');
-
-    // Atualiza Barra de Progresso
-    const progressMap = {1: '20%', 2: '40%', 3: '60%', 4: '80%', 5: '100%'};
-    document.getElementById('progress-bar').style.width = progressMap[stepNumber];
+    document.getElementById(`step-${stepNumber}`).classList.add('active');
+    updateStepper(stepNumber);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function prevStep(targetStep) {
-    showStep(targetStep);
-}
-
-function toggleLoader(show) {
-    const loader = document.getElementById('global-loader');
-    if(loader) loader.style.display = show ? 'flex' : 'none';
-}
-
-// --- Passo 1: Seleção de Categoria ---
 function selectCategory(id) {
     bookingState.categoriaId = id;
     toggleLoader(true);
-
     fetch(`/api/get_services/?categoria_id=${id}`)
-        .then(response => response.json())
+        .then(res => res.json())
         .then(data => {
-            const listContainer = document.getElementById('services-list');
-            listContainer.innerHTML = '';
-            data.forEach(servico => {
-                listContainer.innerHTML += `
-                <div onclick="selectService(${servico.id}, '${servico.nome}', '${servico.preco}', '${servico.tempo}')" 
-                     class="flex justify-between items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:border-accent hover:bg-blue-50 transition shadow-sm bg-white mb-3">
+            const list = document.getElementById('services-list');
+            list.innerHTML = '';
+            data.forEach(s => {
+                const item = document.createElement('div');
+                item.className = "flex justify-between items-center p-6 bg-white border border-gray-100 rounded-3xl cursor-pointer hover:shadow-xl hover:border-accent transition-all group";
+                item.onclick = () => selectService(s.id, s.nome, s.preco, s.tempo);
+                item.innerHTML = `
                     <div>
-                        <h4 class="font-bold text-gray-800">${servico.nome}</h4>
-                        <p class="text-sm text-gray-500"><i class="fa-regular fa-clock"></i> ${servico.tempo} min</p>
+                        <h4 class="font-bold text-gray-800 group-hover:text-accent">${s.nome}</h4>
+                        <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">${s.tempo} MIN</span>
                     </div>
-                    <div class="text-accent font-bold text-lg">R$ ${servico.preco}</div>
-                </div>`;
+                    <div class="text-xl font-black text-gray-900">R$ ${s.preco}</div>
+                `;
+                list.appendChild(item);
             });
             toggleLoader(false);
             showStep(2);
         });
 }
 
-// --- Passo 2: Seleção de Serviço ---
 function selectService(id, nome, preco, tempo) {
     bookingState.servicoId = id;
     bookingState.resumo.servico = nome;
     bookingState.resumo.preco = preco;
     toggleLoader(true);
-
     fetch(`/api/get_professionals/?servico_id=${id}`)
-        .then(response => response.json())
+        .then(res => res.json())
         .then(data => {
             const grid = document.getElementById('professionals-grid');
             grid.innerHTML = '';
-            data.forEach(prof => {
-                const photo = prof.foto_url ? prof.foto_url : 'https://ui-avatars.com/api/?name=' + prof.nome;
-                grid.innerHTML += `
-                <div onclick="selectProfessional(${prof.id}, '${prof.nome}')" 
-                     class="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:border-accent hover:bg-blue-50 transition bg-white group">
-                    <img src="${photo}" class="w-12 h-12 rounded-full object-cover">
-                    <div class="ml-4 text-left">
-                        <h4 class="font-bold text-gray-800">${prof.nome}</h4>
-                        <p class="text-xs text-gray-500">${prof.especialidade || 'Especialista'}</p>
+            data.forEach(p => {
+                const photo = p.foto_url || `https://ui-avatars.com/api/?name=${p.nome}&background=3b82f6&color=fff&bold=true`;
+                const card = document.createElement('div');
+                card.className = "flex items-center p-6 bg-white border border-gray-100 rounded-[2rem] cursor-pointer hover:shadow-xl hover:border-accent transition-all group";
+                card.onclick = () => selectProfessional(p.id, p.nome, p.jornada || {});
+                card.innerHTML = `
+                    <img src="${photo}" class="w-16 h-16 rounded-2xl object-cover shadow-sm group-hover:scale-105 transition-transform">
+                    <div class="ml-5">
+                        <h4 class="font-black text-gray-800 group-hover:text-accent">${p.nome}</h4>
+                        <p class="text-[10px] text-accent font-black uppercase tracking-widest">${p.especialidade || 'Especialista'}</p>
                     </div>
-                </div>`;
+                `;
+                grid.appendChild(card);
             });
             toggleLoader(false);
             showStep(3);
         });
 }
 
-// --- Passo 3: Seleção de Profissional ---
-function selectProfessional(id, nome) {
+function selectProfessional(id, nome, jornada) {
     bookingState.profissionalId = id;
     bookingState.resumo.profissional = nome;
+    
+    // BLOQUEIO DO CALENDÁRIO: Filtra os dias de trabalho (0=Dom, 1=Seg...)
+    const dayMap = { 'dom': 0, 'seg': 1, 'ter': 2, 'qua': 3, 'qui': 4, 'sex': 5, 'sab': 6 };
+    const workingDays = Object.keys(jornada).map(day => dayMap[day]);
+
+    calendarInstance.set('enable', [
+        function(date) {
+            return workingDays.includes(date.getDay());
+        }
+    ]);
     showStep(4);
 }
 
-// --- Passo 4: Data e Hora (A lógica de cores e traços está aqui) ---
 function initCalendar() {
-    flatpickr("#calendar-inline", {
+    calendarInstance = flatpickr("#calendar-inline", {
         inline: true,
         minDate: "today",
         locale: "pt",
-        onChange: function(selectedDates, dateStr) {
-            fetchTimeSlots(dateStr);
-        }
+        onChange: (selectedDates, dateStr) => fetchTimeSlots(dateStr)
     });
 }
 
 function fetchTimeSlots(dateStr) {
     bookingState.data = dateStr;
-    const slotsContainer = document.getElementById('time-slots');
-    slotsContainer.innerHTML = '<div class="col-span-3 text-center py-4">Carregando horários...</div>';
+    const container = document.getElementById('time-slots');
+    container.innerHTML = '<div class="col-span-2 text-center py-10 animate-pulse text-gray-400 font-bold text-[10px]">CONSULTANDO AGENDA...</div>';
 
     fetch(`/api/get_slots/?data=${dateStr}&profissional=${bookingState.profissionalId}&servico=${bookingState.servicoId}`)
-        .then(response => response.json())
+        .then(res => res.json())
         .then(data => {
-            slotsContainer.innerHTML = '';
+            container.innerHTML = '';
+            if(data.slots.length === 0) {
+                container.innerHTML = '<div class="col-span-2 text-center py-10 text-red-400 font-bold">Sem horários.</div>';
+                return;
+            }
             data.slots.forEach(slot => {
-                // Se NÃO disponível: cor cinza, riscado e botão desativado
-                const btnClass = slot.disponivel 
-                    ? "bg-white border-green-500 text-green-700 hover:bg-green-50 cursor-pointer" 
-                    : "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed line-through opacity-50";
-                
-                const disabledAttr = slot.disponivel ? "" : "disabled";
-                const onClickAttr = slot.disponivel ? `onclick="selectTime('${slot.hora}')"` : "";
-
-                slotsContainer.innerHTML += `
-                <button ${disabledAttr} ${onClickAttr} class="border rounded py-2 px-1 text-sm font-medium transition ${btnClass}">
-                    ${slot.hora}
-                </button>`;
+                const btn = document.createElement('button');
+                btn.className = `py-4 border rounded-2xl font-black text-xs transition-all duration-300 shadow-sm ${slot.disponivel ? "bg-white border-gray-100 text-gray-700 hover:bg-accent hover:text-white" : "bg-gray-50 border-transparent text-gray-300 line-through cursor-not-allowed opacity-50"}`;
+                btn.innerText = slot.hora;
+                if(slot.disponivel) btn.onclick = () => selectTime(slot.hora);
+                else btn.disabled = true;
+                container.appendChild(btn);
             });
         });
 }
@@ -148,43 +145,9 @@ function selectTime(hora) {
     showStep(5);
 }
 
-// --- Passo 5: Confirmação Final ---
-function confirmBooking() {
-    const nome = document.getElementById('client-name').value;
-    const telefone = document.getElementById('client-phone').value;
-
-    if (!nome || !telefone) {
-        Swal.fire('Atenção', 'Preencha seu nome e telefone.', 'warning');
-        return;
-    }
-
-    toggleLoader(true);
-
-    fetch('/api/confirm_booking/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: JSON.stringify({
-            profissional_id: bookingState.profissionalId,
-            servico_id: bookingState.servicoId,
-            data: bookingState.data,
-            hora: bookingState.hora,
-            cliente_nome: nome,
-            cliente_telefone: telefone
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        toggleLoader(false);
-        if (data.status === 'success') {
-            Swal.fire('Agendado!', `Código: ${data.codigo}`, 'success')
-                .then(() => location.reload());
-        } else {
-            Swal.fire('Erro', data.message, 'error');
-        }
-    });
+function toggleLoader(show) {
+    const loader = document.getElementById('global-loader');
+    if(loader) loader.style.display = show ? 'flex' : 'none';
 }
 
 function getCookie(name) {
