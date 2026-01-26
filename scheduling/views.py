@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.utils.timezone import make_aware, get_current_timezone # IMPORTANTE
 from django.db import transaction, models 
 from django.contrib.auth.decorators import login_required
+from core.models import Empresa, HorarioEspecial
 
 from services.models import Categoria, Servico
 from professionals.models import Profissional, BloqueioAgenda
@@ -64,64 +65,104 @@ def get_slots(request):
         profissional = Profissional.objects.get(id=prof_id)
         servico = Servico.objects.get(id=servico_id)
         empresa = profissional.empresa
-        tz = get_current_timezone() # Pega America/Sao_Paulo
-    except:
+        tz = get_current_timezone()
+    except Exception as e:
         return JsonResponse({'slots': []})
 
-    dia_semana_map = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom']
-    dia_chave = dia_semana_map[data_obj.weekday()]
+    # 1. VERIFICAÇÃO DE HORÁRIO ESPECIAL (FERIADOS/DATAS ESPECÍFICAS)
+    # Isso tem prioridade sobre o horário padrão da semana
+    horario_especial = HorarioEspecial.objects.filter(empresa=empresa, data=data_obj).first()
+    
+    loja_abertura = None
+    loja_fechamento = None
 
-    config_loja = empresa.horarios_padrao.get(dia_chave, {})
-    if not config_loja.get('aberto', False):
-        return JsonResponse({'slots': []})
+    if horario_especial:
+        if horario_especial.fechado:
+            return JsonResponse({'slots': []}) # A loja está fechada neste dia específico
+        else:
+            loja_abertura = horario_especial.abertura
+            loja_fechamento = horario_especial.fechamento
+    else:
+        # 2. SE NÃO TEM DATA ESPECIAL, USA O PADRÃO DA SEMANA
+        dia_semana_map = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom']
+        dia_chave = dia_semana_map[data_obj.weekday()]
+        
+        config_loja = empresa.horarios_padrao.get(dia_chave, {})
+        if not config_loja.get('aberto', False):
+            return JsonResponse({'slots': []})
+            
+        # Converte string "08:00" para objeto time
+        try:
+            loja_abertura = datetime.strptime(config_loja['inicio'], '%H:%M').time()
+            loja_fechamento = datetime.strptime(config_loja['fim'], '%H:%M').time()
+        except:
+            return JsonResponse({'slots': []})
 
-    jornada = profissional.jornada_config.get(dia_chave, {})
+    # 3. VERIFICAR JORNADA DO PROFISSIONAL
+    # O profissional só pode atender dentro do horário que a loja está aberta
+    dia_semana_prof = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'][data_obj.weekday()]
+    jornada = profissional.jornada_config.get(dia_semana_prof, {})
+    
     if not jornada.get('entrada') or not jornada.get('saida'):
+        # Se o profissional não trabalha nesse dia da semana (e não é uma exceção tratada), retorna vazio
         return JsonResponse({'slots': []})
 
-    # Busca Agendamentos e Bloqueios
+    prof_entrada = datetime.strptime(jornada['entrada'], '%H:%M').time()
+    prof_saida = datetime.strptime(jornada['saida'], '%H:%M').time()
+
+    # O horário efetivo é a intersecção entre a loja e o profissional
+    # Ex: Loja abre 08:00, Profissional chega 09:00 -> Início efetivo 09:00
+    inicio_efetivo = max(loja_abertura, prof_entrada)
+    fim_efetivo = min(loja_fechamento, prof_saida)
+
+    # 4. PREPARAR LOOP DE HORÁRIOS (AWARE DATETIMES)
+    current_dt = make_aware(datetime.combine(data_obj, inicio_efetivo), tz)
+    end_dt = make_aware(datetime.combine(data_obj, fim_efetivo), tz)
+    
+    # Busca Agendamentos já ocupados
     ocupados = Agendamento.objects.filter(
         profissional=profissional,
         data_hora_inicio__date=data_obj,
         status__in=['confirmado', 'pendente']
     )
+    
+    # Busca Bloqueios (Folgas Individuais OU Coletivas)
+    # A query original estava correta, mas garante que pegamos qualquer bloqueio que intercepte o dia
     bloqueios = BloqueioAgenda.objects.filter(
         empresa=empresa,
-        data_inicio__date__lte=data_obj,
-        data_fim__date__gte=data_obj
+        data_inicio__lte=end_dt, 
+        data_fim__gte=current_dt
     ).filter(models.Q(profissional=profissional) | models.Q(profissional__isnull=True))
 
-    # Definimos os limites Aware
-    current_time = make_aware(datetime.strptime(f"{data_str} {jornada['entrada']}", '%Y-%m-%d %H:%M'), tz)
-    end_dt = make_aware(datetime.strptime(f"{data_str} {jornada['saida']}", '%Y-%m-%d %H:%M'), tz)
-    
     slots = []
     tempo_servico = servico.tempo_execucao
 
-    while current_time + timedelta(minutes=tempo_servico) <= end_dt:
-        slot_fim = current_time + timedelta(minutes=tempo_servico)
+    while current_dt + timedelta(minutes=tempo_servico) <= end_dt:
+        slot_fim = current_dt + timedelta(minutes=tempo_servico)
         is_available = True
         
-        # A. Checa contra agendamentos existentes (Comparação Aware vs Aware)
+        # A. Checa Agendamentos
         for ag in ocupados:
-            if (current_time < ag.data_hora_fim) and (slot_fim > ag.data_hora_inicio):
+            # Se o slot sobrepõe um agendamento existente
+            if (current_dt < ag.data_hora_fim) and (slot_fim > ag.data_hora_inicio):
                 is_available = False
                 break
         
-        # B. Checa contra bloqueios
+        # B. Checa Bloqueios (Folgas)
         if is_available:
             for b in bloqueios:
-                if (current_time < b.data_fim) and (slot_fim > b.data_inicio):
+                # Se o slot cai dentro de um período de bloqueio
+                if (current_dt < b.data_fim) and (slot_fim > b.data_inicio):
                     is_available = False
                     break
 
-        # C. Checa se já passou (se for hoje)
+        # C. Checa Passado (se for hoje, não mostra horários que já passaram)
         if is_available and data_obj == timezone.localdate():
-            if current_time < timezone.localtime():
+            if current_dt < timezone.localtime():
                 is_available = False
 
-        slots.append({'hora': current_time.strftime('%H:%M'), 'disponivel': is_available})
-        current_time += timedelta(minutes=30) 
+        slots.append({'hora': current_dt.strftime('%H:%M'), 'disponivel': is_available})
+        current_dt += timedelta(minutes=30) 
 
     return JsonResponse({'slots': slots})
 
