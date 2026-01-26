@@ -4,17 +4,17 @@ from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils import timezone
-from django.utils.timezone import make_aware, get_current_timezone # IMPORTANTE
+from django.utils.timezone import make_aware, get_current_timezone
 from django.db import transaction, models 
 from django.contrib.auth.decorators import login_required
-from core.models import Empresa, HorarioEspecial
+from django.views.decorators.http import require_POST
 
+from core.models import Empresa, HorarioEspecial
 from services.models import Categoria, Servico
 from professionals.models import Profissional, BloqueioAgenda
 from .models import Agendamento
-from core.models import Empresa
 
-# 1. Renderiza a Tela do Wizard
+# ... (Mantenha agendamento_wizard, get_services, get_professionals iguais) ...
 @ensure_csrf_cookie
 def agendamento_wizard(request):
     empresa = Empresa.objects.first() 
@@ -27,19 +27,15 @@ def agendamento_wizard(request):
         'empresa': empresa
     })
 
-# 2. API: Retorna Serviços
 def get_services(request):
     cat_id = request.GET.get('categoria_id')
     servicos = Servico.objects.filter(categoria_id=cat_id).values('id', 'nome', 'preco', 'tempo_execucao')
     data = [{'id': s['id'], 'nome': s['nome'], 'preco': str(s['preco']), 'tempo': s['tempo_execucao']} for s in servicos]
     return JsonResponse(data, safe=False)
 
-# 3. API: Retorna Profissionais
 def get_professionals(request):
     servico_id = request.GET.get('servico_id')
-    # Filtra profissionais que realizam o serviço selecionado
     profissionais = Profissional.objects.filter(servicos_realizados__id=servico_id)
-    
     data = []
     for p in profissionais:
         data.append({
@@ -47,11 +43,12 @@ def get_professionals(request):
             'nome': p.nome,
             'especialidade': p.especialidade,
             'foto_url': p.foto.url if p.foto else None,
-            'jornada': p.jornada_config  # <-- Essencial para o bloqueio do calendário
+            'jornada': p.jornada_config
         })
     return JsonResponse(data, safe=False)
 
-# 4. API: O Cérebro (Calcula Horários Livres) - CORRIGIDO
+
+# --- LÓGICA CORRIGIDA DOS HORÁRIOS ---
 def get_slots(request):
     data_str = request.GET.get('data') 
     prof_id = request.GET.get('profissional')
@@ -66,68 +63,66 @@ def get_slots(request):
         servico = Servico.objects.get(id=servico_id)
         empresa = profissional.empresa
         tz = get_current_timezone()
-    except Exception as e:
+    except Exception:
         return JsonResponse({'slots': []})
 
-    # 1. VERIFICAÇÃO DE HORÁRIO ESPECIAL (FERIADOS/DATAS ESPECÍFICAS)
-    # Isso tem prioridade sobre o horário padrão da semana
+    # 1. Horário da Loja (Empresa)
     horario_especial = HorarioEspecial.objects.filter(empresa=empresa, data=data_obj).first()
-    
     loja_abertura = None
     loja_fechamento = None
 
     if horario_especial:
         if horario_especial.fechado:
-            return JsonResponse({'slots': []}) # A loja está fechada neste dia específico
-        else:
-            loja_abertura = horario_especial.abertura
-            loja_fechamento = horario_especial.fechamento
+            return JsonResponse({'slots': []})
+        loja_abertura = horario_especial.abertura
+        loja_fechamento = horario_especial.fechamento
     else:
-        # 2. SE NÃO TEM DATA ESPECIAL, USA O PADRÃO DA SEMANA
         dia_semana_map = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom']
         dia_chave = dia_semana_map[data_obj.weekday()]
-        
         config_loja = empresa.horarios_padrao.get(dia_chave, {})
+        
         if not config_loja.get('aberto', False):
             return JsonResponse({'slots': []})
             
-        # Converte string "08:00" para objeto time
         try:
             loja_abertura = datetime.strptime(config_loja['inicio'], '%H:%M').time()
             loja_fechamento = datetime.strptime(config_loja['fim'], '%H:%M').time()
         except:
             return JsonResponse({'slots': []})
 
-    # 3. VERIFICAR JORNADA DO PROFISSIONAL
-    # O profissional só pode atender dentro do horário que a loja está aberta
+    # 2. Jornada do Profissional
     dia_semana_prof = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'][data_obj.weekday()]
     jornada = profissional.jornada_config.get(dia_semana_prof, {})
     
     if not jornada.get('entrada') or not jornada.get('saida'):
-        # Se o profissional não trabalha nesse dia da semana (e não é uma exceção tratada), retorna vazio
         return JsonResponse({'slots': []})
 
     prof_entrada = datetime.strptime(jornada['entrada'], '%H:%M').time()
     prof_saida = datetime.strptime(jornada['saida'], '%H:%M').time()
 
-    # O horário efetivo é a intersecção entre a loja e o profissional
-    # Ex: Loja abre 08:00, Profissional chega 09:00 -> Início efetivo 09:00
+    # Intersecção de horários
     inicio_efetivo = max(loja_abertura, prof_entrada)
     fim_efetivo = min(loja_fechamento, prof_saida)
 
-    # 4. PREPARAR LOOP DE HORÁRIOS (AWARE DATETIMES)
     current_dt = make_aware(datetime.combine(data_obj, inicio_efetivo), tz)
     end_dt = make_aware(datetime.combine(data_obj, fim_efetivo), tz)
-    
-    # Busca Agendamentos já ocupados
+
+    # --- CORREÇÃO SOLICITADA: Forçar alinhamento em :00 ou :30 ---
+    # Se o horário calculado for 08:15, avança para 08:30. Se for 08:40, avança para 09:00.
+    minute = current_dt.minute
+    if minute != 0 and minute != 30:
+        if minute < 30:
+            current_dt = current_dt.replace(minute=30, second=0, microsecond=0)
+        else:
+            current_dt = (current_dt + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+
+    # Carrega ocupações
     ocupados = Agendamento.objects.filter(
         profissional=profissional,
         data_hora_inicio__date=data_obj,
         status__in=['confirmado', 'pendente']
     )
     
-    # Busca Bloqueios (Folgas Individuais OU Coletivas)
-    # A query original estava correta, mas garante que pegamos qualquer bloqueio que intercepte o dia
     bloqueios = BloqueioAgenda.objects.filter(
         empresa=empresa,
         data_inicio__lte=end_dt, 
@@ -137,36 +132,34 @@ def get_slots(request):
     slots = []
     tempo_servico = servico.tempo_execucao
 
+    # Loop principal (incremento fixo de 30 min)
     while current_dt + timedelta(minutes=tempo_servico) <= end_dt:
         slot_fim = current_dt + timedelta(minutes=tempo_servico)
         is_available = True
         
-        # A. Checa Agendamentos
+        # Validações
         for ag in ocupados:
-            # Se o slot sobrepõe um agendamento existente
             if (current_dt < ag.data_hora_fim) and (slot_fim > ag.data_hora_inicio):
                 is_available = False
                 break
         
-        # B. Checa Bloqueios (Folgas)
         if is_available:
             for b in bloqueios:
-                # Se o slot cai dentro de um período de bloqueio
                 if (current_dt < b.data_fim) and (slot_fim > b.data_inicio):
                     is_available = False
                     break
 
-        # C. Checa Passado (se for hoje, não mostra horários que já passaram)
         if is_available and data_obj == timezone.localdate():
             if current_dt < timezone.localtime():
                 is_available = False
 
         slots.append({'hora': current_dt.strftime('%H:%M'), 'disponivel': is_available})
+        
+        # Incremento fixo de 30 minutos conforme solicitado
         current_dt += timedelta(minutes=30) 
 
     return JsonResponse({'slots': slots})
 
-# 5. API: Salvar Agendamento - CORRIGIDO PARA TIMEZONE AWARE
 def confirm_booking(request):
     if request.method == 'POST':
         try:
@@ -176,7 +169,6 @@ def confirm_booking(request):
             profissional = Profissional.objects.get(id=data['profissional_id'])
             servico = Servico.objects.get(id=data['servico_id'])
             
-            # CRIANDO DATA AWARE (Com fuso horário) para o banco entender
             str_inicio = f"{data['data']} {data['hora']}"
             inicio_naive = datetime.strptime(str_inicio, '%Y-%m-%d %H:%M')
             inicio = make_aware(inicio_naive, tz)
@@ -209,10 +201,35 @@ def confirm_booking(request):
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
     return JsonResponse({'status': 'error'}, status=400)
 
+
+# --- FUNÇÕES DE GESTÃO (EDITAR E EXCLUIR) ---
+
 @login_required
 def gestao_agendamentos(request):
     agendamentos = Agendamento.objects.filter(
         empresa=request.user.empresa,
-        data_hora_inicio__gte=timezone.now()
+        data_hora_inicio__gte=timezone.now() - timedelta(days=1) # Mostra tb o dia anterior por segurança
     ).order_by('data_hora_inicio')
     return render(request, 'scheduling/gestao_agendamentos.html', {'agendamentos': agendamentos})
+
+@login_required
+@require_POST
+def api_delete_agendamento(request, ag_id):
+    agendamento = get_object_or_404(Agendamento, id=ag_id, empresa=request.user.empresa)
+    agendamento.delete()
+    return JsonResponse({'status': 'success'})
+
+@login_required
+@require_POST
+def api_edit_agendamento(request, ag_id):
+    agendamento = get_object_or_404(Agendamento, id=ag_id, empresa=request.user.empresa)
+    try:
+        data = json.loads(request.body)
+        if 'status' in data:
+            agendamento.status = data['status']
+        if 'cliente_nome' in data:
+            agendamento.cliente_nome = data['cliente_nome']
+        agendamento.save()
+        return JsonResponse({'status': 'success'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
