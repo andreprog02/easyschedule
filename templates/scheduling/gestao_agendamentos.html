@@ -76,21 +76,7 @@
 </div>
 
 <script>
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-}
-
+// Função para excluir agendamento
 function excluirAgendamento(id) {
     Swal.fire({
         title: 'Cancelar Agendamento?',
@@ -102,23 +88,37 @@ function excluirAgendamento(id) {
         cancelButtonText: 'Voltar'
     }).then((result) => {
         if (result.isConfirmed) {
-            // CORRIGIDO: Removemos '/agendamento' do início da URL
-            fetch(`/gestao/api/delete/${id}/`, {
+            // URL direta
+            const url = `/gestao/api/delete/${id}/`;
+            
+            fetch(url, {
                 method: 'POST',
-                headers: {'X-CSRFToken': getCookie('csrftoken')}
+                headers: {
+                    // Injeção direta do token pelo Django (Infalível)
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
             })
-            .then(res => res.json())
+            .then(res => {
+                if (!res.ok) throw new Error("Erro na comunicação com o servidor");
+                return res.json();
+            })
             .then(data => {
                 if(data.status === 'success') {
-                    Swal.fire('Excluído!', 'O agendamento foi removido.', 'success').then(() => location.reload());
+                    Swal.fire('Excluído!', 'O agendamento foi removido.', 'success')
+                        .then(() => location.reload());
                 } else {
-                    Swal.fire('Erro', 'Não foi possível excluir.', 'error');
+                    Swal.fire('Erro', data.message || 'Não foi possível excluir.', 'error');
                 }
+            })
+            .catch(error => {
+                console.error("Erro JS:", error);
+                Swal.fire('Erro', 'Falha ao processar. Abra o console (F12) para ver detalhes.', 'error');
             });
         }
     })
 }
 
+// Função para editar status e nome
 function editarStatus(id, currentStatus, currentNome) {
     Swal.fire({
         title: 'Editar Agendamento',
@@ -147,16 +147,27 @@ function editarStatus(id, currentStatus, currentNome) {
         }
     }).then((result) => {
         if (result.isConfirmed) {
-            // CORRIGIDO: Removemos '/agendamento' do início da URL
-            fetch(`/gestao/api/edit/${id}/`, {
+            const url = `/gestao/api/edit/${id}/`;
+
+            fetch(url, {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}' // Token direto
+                },
                 body: JSON.stringify(result.value)
             })
-            .then(res => res.json())
+            .then(res => {
+                if (!res.ok) throw new Error("Erro na comunicação com o servidor");
+                return res.json();
+            })
             .then(data => {
                 if(data.status === 'success') location.reload();
                 else Swal.fire('Erro', data.message || 'Erro ao editar.', 'error');
+            })
+            .catch(error => {
+                console.error("Erro JS:", error);
+                Swal.fire('Erro', 'Falha ao salvar. Abra o console (F12) para ver detalhes.', 'error');
             });
         }
     });
