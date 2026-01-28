@@ -158,24 +158,31 @@
                     </button>
                 </div>
 
-                <div class="bg-slate-50 rounded-[2.5rem] p-10 border border-slate-100">
+                <div class="bg-slate-50 rounded-[2.5rem] p-10 border border-slate-100 h-fit">
                     <h4 class="font-black text-slate-900 text-lg mb-8 border-b border-slate-200 pb-4">Detalhes do Agendamento</h4>
                     <ul class="space-y-6">
                         <li class="flex justify-between items-center">
                             <span class="text-slate-500 font-medium">Serviço</span>
-                            <span id="summary-service" class="font-bold text-slate-800">-</span>
+                            <span id="summary-service" class="font-bold text-slate-800 text-right">-</span>
                         </li>
                         <li class="flex justify-between items-center">
                             <span class="text-slate-500 font-medium">Profissional</span>
-                            <span id="summary-professional" class="font-bold text-slate-800">-</span>
+                            <span id="summary-professional" class="font-bold text-slate-800 text-right">-</span>
                         </li>
                         <li class="flex justify-between items-center">
                             <span class="text-slate-500 font-medium">Data e Hora</span>
-                            <span id="summary-datetime" class="font-bold text-blue-600">-</span>
+                            <span id="summary-datetime" class="font-bold text-blue-600 text-right">-</span>
                         </li>
-                        <li class="flex justify-between items-center pt-6 border-t border-slate-200">
-                            <span class="text-slate-900 font-black text-xl">Preço Total</span>
-                            <span id="summary-price" class="text-3xl font-black text-slate-900 tracking-tighter">R$ 0,00</span>
+                        
+                        <li class="pt-6 border-t border-slate-200">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-slate-900 font-black text-xl">Preço Estimado</span>
+                                <span id="summary-price" class="text-3xl font-black text-slate-900 tracking-tighter">R$ 0,00</span>
+                            </div>
+                            
+                            <p class="text-[10px] text-slate-400 font-medium italic text-right leading-tight">
+                                * Serviços adicionais ou alterações no procedimento terão o valor atualizado no local.
+                            </p>
                         </li>
                     </ul>
                 </div>
