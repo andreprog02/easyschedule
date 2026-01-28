@@ -8,7 +8,7 @@
     <div class="flex justify-between items-center mb-8">
         <div>
             <h1 class="text-2xl font-bold text-gray-800">Catálogo de Serviços</h1>
-            <p class="text-gray-500 text-sm">Organize seus preços e tempos de atendimento.</p>
+            <p class="text-gray-500 text-sm">Organize seus preços, tempos de atendimento e ícones.</p>
         </div>
         <div class="flex gap-2">
             <a href="{% url 'dashboard' %}" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition">
@@ -25,14 +25,21 @@
         <div class="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100" id="cat-card-{{ categoria.id }}">
             
             <div class="bg-gray-50 px-6 py-4 flex justify-between items-center border-b border-gray-100">
-                <h3 class="text-lg font-bold text-gray-700">
-                    <i class="fa-solid fa-tag text-accent mr-2"></i> {{ categoria.nome }}
-                </h3>
+                <div class="flex items-center gap-3">
+                    {% if categoria.icone %}
+                        <img src="{{ categoria.icone.url }}" class="w-10 h-10 rounded-lg object-cover shadow-sm border border-gray-200">
+                    {% else %}
+                        <div class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-accent">
+                            <i class="fa-solid fa-folder text-xl"></i>
+                        </div>
+                    {% endif %}
+                    <h3 class="text-lg font-bold text-gray-700">{{ categoria.nome }}</h3>
+                </div>
                 <div class="flex items-center gap-2">
-                    <button onclick="novoServico('{{ categoria.id }}')" class="text-sm bg-white border border-gray-300 text-gray-700 px-3 py-1 rounded hover:bg-gray-50 transition">
-                        <i class="fa-solid fa-plus"></i> Add Serviço
+                    <button onclick="novoServico('{{ categoria.id }}')" class="text-sm bg-white border border-gray-300 text-gray-700 px-3 py-1.5 rounded hover:bg-gray-50 transition font-medium">
+                        <i class="fa-solid fa-plus text-accent mr-1"></i> Serviço
                     </button>
-                    <button onclick="excluirCategoria('{{ categoria.id }}')" class="text-red-400 hover:text-red-600 px-2 transition" title="Excluir Categoria">
+                    <button onclick="excluirCategoria('{{ categoria.id }}')" class="text-red-400 hover:text-red-600 px-2 transition bg-white border border-transparent hover:border-red-100 rounded py-1" title="Excluir Categoria">
                         <i class="fa-solid fa-trash"></i>
                     </button>
                 </div>
@@ -41,25 +48,34 @@
             <div class="p-0">
                 <table class="w-full text-left border-collapse">
                     <thead>
-                        <tr class="text-xs text-gray-500 bg-gray-50 uppercase border-b border-gray-100">
-                            <th class="px-6 py-3 font-medium">Nome do Serviço</th>
-                            <th class="px-6 py-3 font-medium">Preço (R$)</th>
-                            <th class="px-6 py-3 font-medium">Tempo (min)</th>
-                            <th class="px-6 py-3 font-medium text-right">Ações</th>
+                        <tr class="text-xs text-gray-400 bg-white uppercase border-b border-gray-100">
+                            <th class="px-6 py-2 font-semibold">Serviço</th>
+                            <th class="px-6 py-2 font-semibold">Preço</th>
+                            <th class="px-6 py-2 font-semibold">Tempo</th>
+                            <th class="px-6 py-2 font-semibold text-right">Ações</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100" id="tbody-cat-{{ categoria.id }}">
                         {% for servico in categoria.servicos.all %}
                         <tr class="hover:bg-blue-50 transition group" id="servico-row-{{ servico.id }}">
-                            <td class="px-6 py-4 font-medium text-gray-800">{{ servico.nome }}</td>
-                            <td class="px-6 py-4 text-green-600 font-bold">R$ {{ servico.preco }}</td>
-                            <td class="px-6 py-4 text-gray-500"><i class="fa-regular fa-clock mr-1"></i> {{ servico.tempo_execucao }}</td>
+                            <td class="px-6 py-4 flex items-center gap-3">
+                                {% if servico.icone %}
+                                    <img src="{{ servico.icone.url }}" class="w-8 h-8 rounded-full object-cover border border-gray-200">
+                                {% else %}
+                                    <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 text-xs">
+                                        <i class="fa-solid fa-scissors"></i>
+                                    </div>
+                                {% endif %}
+                                <span class="font-medium text-gray-800">{{ servico.nome }}</span>
+                            </td>
+                            <td class="px-6 py-4 text-green-600 font-bold text-sm">R$ {{ servico.preco }}</td>
+                            <td class="px-6 py-4 text-gray-500 text-sm"><i class="fa-regular fa-clock mr-1"></i> {{ servico.tempo_execucao }} min</td>
                             <td class="px-6 py-4 text-right">
                                 <button onclick="editarServico('{{ servico.id }}', '{{ servico.nome }}', '{{ servico.preco }}', '{{ servico.tempo_execucao }}')" 
-                                        class="text-blue-400 hover:text-blue-600 mr-3">
+                                        class="text-blue-400 hover:text-blue-600 mr-3 p-1 rounded hover:bg-blue-100 transition">
                                     <i class="fa-solid fa-pen"></i>
                                 </button>
-                                <button onclick="excluirServico('{{ servico.id }}')" class="text-red-300 hover:text-red-500">
+                                <button onclick="excluirServico('{{ servico.id }}')" class="text-red-300 hover:text-red-500 p-1 rounded hover:bg-red-100 transition">
                                     <i class="fa-solid fa-trash"></i>
                                 </button>
                             </td>
@@ -87,8 +103,11 @@
     </div>
 </div>
 
+{% endblock %}
+
+{% block scripts %}
 <script>
-    // --- Funções Auxiliares ---
+    // Função auxiliar para pegar o token CSRF
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
@@ -104,27 +123,43 @@
         return cookieValue;
     }
 
-    // --- 1. Nova Categoria ---
+    // --- 1. Nova Categoria (com Upload) ---
     function novaCategoria() {
         Swal.fire({
             title: 'Nova Categoria',
-            input: 'text',
-            inputLabel: 'Nome da Categoria (ex: Barba, Cabelo)',
+            html: `
+                <div class="text-left">
+                    <label class="text-xs font-bold text-gray-400 uppercase">Nome da Categoria</label>
+                    <input id="cat-nome" class="swal2-input !m-0 !w-full !mb-4" placeholder="Ex: Cabelo, Barba...">
+                    
+                    <label class="text-xs font-bold text-gray-400 uppercase">Ícone (Opcional)</label>
+                    <input type="file" id="cat-icone" class="block w-full text-sm text-slate-500 mt-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                </div>
+            `,
             showCancelButton: true,
             confirmButtonText: 'Salvar',
             confirmButtonColor: '#3b82f6',
-            cancelButtonText: 'Cancelar',
-            inputValidator: (value) => {
-                if (!value) return 'Você precisa escrever um nome!'
+            preConfirm: () => {
+                const nome = document.getElementById('cat-nome').value;
+                const file = document.getElementById('cat-icone').files[0];
+                
+                if (!nome) return Swal.showValidationMessage('O nome é obrigatório');
+                
+                // Usamos FormData para enviar arquivos
+                const fd = new FormData();
+                fd.append('nome', nome);
+                if(file) fd.append('icone', file);
+                return fd;
             }
         }).then((result) => {
             if (result.isConfirmed) {
                 fetch("{% url 'api_add_categoria' %}", {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
-                    body: JSON.stringify({nome: result.value})
+                    headers: {'X-CSRFToken': getCookie('csrftoken')},
+                    body: result.value // Envia o FormData
                 }).then(res => res.json()).then(data => {
                     if(data.status === 'success') location.reload();
+                    else Swal.fire('Erro', data.message, 'error');
                 });
             }
         });
@@ -148,46 +183,62 @@
                 }).then(res => res.json()).then(data => {
                     if(data.status === 'success') {
                         document.getElementById(`cat-card-${id}`).remove();
-                        Swal.fire('Excluído!', '', 'success');
+                        Swal.fire({title: 'Excluído!', icon: 'success', timer: 1500, showConfirmButton: false});
                     }
                 });
             }
         })
     }
 
-    // --- 3. Novo Serviço (Pop-up Complexo) ---
+    // --- 3. Novo Serviço (com Upload) ---
     function novoServico(catId) {
         Swal.fire({
             title: 'Novo Serviço',
             html: `
-                <input id="swal-nome" class="swal2-input" placeholder="Nome (ex: Corte Simples)">
-                <input id="swal-preco" type="number" step="0.01" class="swal2-input" placeholder="Preço (ex: 35.00)">
-                <input id="swal-tempo" type="number" class="swal2-input" placeholder="Tempo em minutos (ex: 30)">
+                <div class="space-y-4 text-left">
+                    <div>
+                        <label class="text-xs font-bold text-gray-400 uppercase">Nome</label>
+                        <input id="s-nome" class="swal2-input !m-0 !w-full" placeholder="Ex: Corte Degrade">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-xs font-bold text-gray-400 uppercase">Preço (R$)</label>
+                            <input id="s-preco" type="number" step="0.01" class="swal2-input !m-0 !w-full" placeholder="0.00">
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-gray-400 uppercase">Tempo (min)</label>
+                            <input id="s-tempo" type="number" class="swal2-input !m-0 !w-full" placeholder="30">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-gray-400 uppercase">Ícone (Opcional)</label>
+                        <input type="file" id="s-icone" class="block w-full text-sm text-slate-500 mt-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                    </div>
+                </div>
             `,
-            focusConfirm: false,
             showCancelButton: true,
             confirmButtonText: 'Salvar',
             confirmButtonColor: '#3b82f6',
             preConfirm: () => {
-                return {
-                    categoria_id: catId,
-                    nome: document.getElementById('swal-nome').value,
-                    preco: document.getElementById('swal-preco').value,
-                    tempo: document.getElementById('swal-tempo').value
+                const fd = new FormData();
+                fd.append('categoria_id', catId);
+                fd.append('nome', document.getElementById('s-nome').value);
+                fd.append('preco', document.getElementById('s-preco').value);
+                fd.append('tempo', document.getElementById('s-tempo').value);
+                const file = document.getElementById('s-icone').files[0];
+                if(file) fd.append('icone', file);
+                
+                if(!fd.get('nome') || !fd.get('preco') || !fd.get('tempo')) {
+                    return Swal.showValidationMessage('Preencha os campos obrigatórios');
                 }
+                return fd;
             }
         }).then((result) => {
             if (result.isConfirmed) {
-                const data = result.value;
-                if(!data.nome || !data.preco || !data.tempo) {
-                    Swal.fire('Erro', 'Preencha todos os campos', 'error');
-                    return;
-                }
-
                 fetch("{% url 'api_add_service' %}", {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
-                    body: JSON.stringify(data)
+                    headers: {'X-CSRFToken': getCookie('csrftoken')},
+                    body: result.value
                 }).then(res => res.json()).then(resp => {
                     if(resp.status === 'success') location.reload();
                     else Swal.fire('Erro', resp.message, 'error');
@@ -213,39 +264,60 @@
                 }).then(res => res.json()).then(data => {
                     if(data.status === 'success') {
                         document.getElementById(`servico-row-${id}`).remove();
+                        Swal.fire({title: 'Apagado!', icon: 'success', timer: 1500, showConfirmButton: false});
                     }
                 });
             }
         })
     }
 
-    // --- 5. Editar Serviço ---
+    // --- 5. Editar Serviço (com Upload) ---
     function editarServico(id, nome, preco, tempo) {
         Swal.fire({
             title: 'Editar Serviço',
             html: `
-                <input id="swal-edit-nome" class="swal2-input" value="${nome}" placeholder="Nome">
-                <input id="swal-edit-preco" type="number" step="0.01" class="swal2-input" value="${preco}" placeholder="Preço">
-                <input id="swal-edit-tempo" type="number" class="swal2-input" value="${tempo}" placeholder="Tempo (min)">
+                <div class="space-y-4 text-left">
+                    <div>
+                        <label class="text-xs font-bold text-gray-400 uppercase">Nome</label>
+                        <input id="e-nome" class="swal2-input !m-0 !w-full" value="${nome}">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-xs font-bold text-gray-400 uppercase">Preço (R$)</label>
+                            <input id="e-preco" type="number" step="0.01" class="swal2-input !m-0 !w-full" value="${preco}">
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-gray-400 uppercase">Tempo (min)</label>
+                            <input id="e-tempo" type="number" class="swal2-input !m-0 !w-full" value="${tempo}">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-gray-400 uppercase">Alterar Ícone</label>
+                        <input type="file" id="e-icone" class="block w-full text-sm text-slate-500 mt-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                    </div>
+                </div>
             `,
             showCancelButton: true,
             confirmButtonText: 'Atualizar',
             confirmButtonColor: '#3b82f6',
             preConfirm: () => {
-                return {
-                    nome: document.getElementById('swal-edit-nome').value,
-                    preco: document.getElementById('swal-edit-preco').value,
-                    tempo: document.getElementById('swal-edit-tempo').value
-                }
+                const fd = new FormData();
+                fd.append('nome', document.getElementById('e-nome').value);
+                fd.append('preco', document.getElementById('e-preco').value);
+                fd.append('tempo', document.getElementById('e-tempo').value);
+                const file = document.getElementById('e-icone').files[0];
+                if(file) fd.append('icone', file);
+                return fd;
             }
         }).then((result) => {
             if (result.isConfirmed) {
                 fetch(`/servicos/api/edit_service/${id}/`, {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
-                    body: JSON.stringify(result.value)
+                    headers: {'X-CSRFToken': getCookie('csrftoken')},
+                    body: result.value
                 }).then(res => res.json()).then(resp => {
                     if(resp.status === 'success') location.reload();
+                    else Swal.fire('Erro', 'Não foi possível atualizar.', 'error');
                 });
             }
         });

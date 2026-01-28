@@ -1,157 +1,374 @@
 {% extends 'base.html' %}
-
-{% block title %}Equipe - EasySchedule{% endblock %}
-
 {% block content %}
-<div class="max-w-6xl mx-auto">
-    <div class="flex justify-between items-center mb-8">
+<div class="max-w-7xl mx-auto px-6 py-8">
+    
+    <div class="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-gray-800">Minha Equipe</h1>
-            <p class="text-gray-500 text-sm">Gerencie horários e especialidades.</p>
+            <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">Equipe & Profissionais</h1>
+            <p class="text-gray-500 mt-1">Gerencie os talentos do seu negócio com estilo.</p>
         </div>
-        <button onclick="modalProfissional()" class="bg-accent text-white px-5 py-2 rounded-lg hover:bg-blue-600 transition shadow-md">
-            <i class="fa-solid fa-user-plus mr-2"></i> Novo Profissional
-        </button>
+        
+        <div class="flex gap-3">
+            <a href="{% url 'dashboard' %}" 
+               class="px-5 py-3 rounded-2xl border border-gray-200 text-gray-600 bg-white hover:bg-gray-50 hover:text-gray-900 font-semibold transition-all duration-300 flex items-center shadow-sm hover:shadow-md">
+                <i class="fa-solid fa-arrow-left mr-2"></i> Voltar
+            </a>
+
+            <button onclick="novoProfissional()" 
+                    class="group bg-gray-900 text-white px-6 py-3 rounded-2xl hover:bg-black shadow-lg hover:shadow-xl transition-all duration-300 flex items-center font-semibold">
+                <div class="bg-gray-700 rounded-full p-1 mr-3 group-hover:bg-gray-600 transition">
+                    <i class="fa-solid fa-plus text-xs"></i>
+                </div>
+                Novo Profissional
+            </button>
+        </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {% for prof in profissionais %}
-        <div class="bg-white rounded-xl shadow-md p-6 border border-gray-100 flex flex-col items-center text-center relative group">
-            <div class="absolute top-4 right-4 flex gap-2">
-                <button onclick="modalProfissional('{{ prof.id }}')" class="text-blue-400 hover:text-blue-600 transition" title="Editar">
-                    <i class="fa-solid fa-pen-to-square"></i>
-                </button>
-                <button onclick="excluirProfissional('{{ prof.id }}')" class="text-gray-300 hover:text-red-500 transition" title="Excluir">
-                    <i class="fa-solid fa-trash"></i>
-                </button>
-            </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+        {% for p in profissionais %}
+        <div class="group bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all duration-300 overflow-hidden flex flex-col border border-gray-100">
             
-            {% if prof.foto %}
-                <img src="{{ prof.foto.url }}" class="w-20 h-20 rounded-full object-cover mb-3 border-2 border-blue-50">
-            {% else %}
-                <div class="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mb-3 text-gray-400"><i class="fa-solid fa-user text-2xl"></i></div>
-            {% endif %}
-            
-            <h3 class="font-bold text-gray-800">{{ prof.nome }}</h3>
-            <p class="text-xs text-accent font-semibold uppercase tracking-wider mb-3">{{ prof.especialidade }}</p>
-            
-            <div class="w-full border-t pt-3 mt-auto">
-                <span class="text-[10px] text-gray-400 font-bold block mb-2">DIAS DE TRABALHO:</span>
-                <div class="flex justify-center gap-1">
-                    {% for dia, config in prof.jornada_config.items %}
-                        <span class="w-6 h-6 flex items-center justify-center rounded-full bg-blue-50 text-accent text-[9px] font-bold" title="{{ config.entrada }} - {{ config.saida }}">
-                            {{ dia|slice:":1"|upper }}
-                        </span>
-                    {% endfor %}
+            <div class="relative w-full aspect-square overflow-hidden bg-gray-100">
+                {% if p.foto %}
+                <img src="{{ p.foto.url }}" class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500">
+                {% else %}
+                <div class="w-full h-full flex flex-col items-center justify-center text-gray-300">
+                    <i class="fa-solid fa-user text-6xl mb-2"></i>
+                    <span class="text-xs font-medium uppercase tracking-widest opacity-50">Sem Foto</span>
+                </div>
+                {% endif %}
+                
+                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center space-x-4 backdrop-blur-sm">
+                    <button onclick="editarDados('{{ p.id }}')" class="bg-white text-gray-900 w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-100 hover:scale-110 transition shadow-lg" title="Editar">
+                        <i class="fa-solid fa-pen"></i>
+                    </button>
+                    <button onclick="excluirProfissional('{{ p.id }}')" class="bg-white text-red-500 w-10 h-10 rounded-full flex items-center justify-center hover:bg-red-50 hover:scale-110 transition shadow-lg" title="Excluir">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
                 </div>
             </div>
+
+            <div class="p-6 text-center flex-grow flex flex-col justify-between">
+                <div>
+                    <h3 class="text-lg font-bold text-gray-900 mb-1">{{ p.nome }}</h3>
+                    <span class="inline-block px-3 py-1 bg-gray-50 text-gray-500 text-xs font-bold uppercase tracking-wider rounded-full border border-gray-100">
+                        {{ p.especialidade|default:"Geral" }}
+                    </span>
+                    <p class="text-[10px] text-gray-400 mt-2">
+                        {{ p.servicos_realizados.count }} serviços habilitados
+                    </p>
+                </div>
+                
+                <button onclick="editarProfissional('{{ p.id }}')" 
+                        class="w-full mt-6 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm font-semibold hover:bg-gray-50 hover:border-gray-300 transition flex items-center justify-center gap-2">
+                    <i class="fa-regular fa-clock"></i> Configurar Horários
+                </button>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-full py-20 text-center">
+            <div class="inline-flex items-center justify-center w-20 h-20 bg-gray-50 rounded-full mb-4">
+                <i class="fa-solid fa-users-slash text-3xl text-gray-300"></i>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900">Nenhum profissional encontrado</h3>
+            <p class="text-gray-500">Comece adicionando o primeiro membro da sua equipe.</p>
         </div>
         {% endfor %}
     </div>
 </div>
 
-<script>
-async function modalProfissional(id = null) {
-    let dados = { nome: '', especialidade: '', servicos: [], jornada: {} };
-    let titulo = id ? 'Editar Profissional' : 'Novo Profissional';
-    let urlAction = id ? `/equipe/api/edit/${id}/` : "{% url 'api_add_profissional' %}";
+{{ empresa.horarios_padrao|json_script:"config-loja-data" }}
 
-    if (id) {
-        const resp = await fetch(`/equipe/api/get/${id}/`);
-        dados = await resp.json();
+<script>
+    const CONFIG_LOJA = JSON.parse(document.getElementById('config-loja-data').textContent);
+    const DIAS_MAP = {'seg':'Segunda','ter':'Terça','qua':'Quarta','qui':'Quinta','sex':'Sexta','sab':'Sábado','dom':'Domingo'};
+    const ORDEM_DIAS = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
+
+function previewImage(input) {
+    const preview = document.getElementById('preview-foto');
+    const placeholder = document.getElementById('preview-placeholder');
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            preview.classList.remove('hidden');
+            placeholder.classList.add('hidden');
+        }
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function getHorariosOptions(selectedTime) {
+    let options = '<option value="">--</option>';
+    for (let h = 0; h < 24; h++) {
+        for (let m of ['00', '30']) {
+            let hora = `${h.toString().padStart(2, '0')}:${m}`;
+            let isSelected = hora === selectedTime ? 'selected' : '';
+            options += `<option value="${hora}" ${isSelected}>${hora}</option>`;
+        }
+    }
+    return options;
+}
+
+function carregarHorarioLoja() {
+    ORDEM_DIAS.forEach(dia => {
+        const configDia = CONFIG_LOJA[dia];
+        if (configDia && configDia.aberto) {
+            const inputEntrada = document.getElementById(`entrada-${dia}`);
+            const inputSaida = document.getElementById(`saida-${dia}`);
+            if (inputEntrada) inputEntrada.value = configDia.inicio;
+            if (inputSaida) inputSaida.value = configDia.fim;
+        }
+    });
+    
+    const btn = document.getElementById('btn-carregar-horarios');
+    btn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> Copiado!';
+    setTimeout(() => {
+        btn.innerHTML = '<i class="fa-solid fa-store mr-2"></i> Copiar Horário do Salão';
+    }, 2000);
+}
+
+// --- CONTROLE DE SERVIÇOS (TAGS) ---
+function toggleServico(el) {
+    el.classList.toggle('bg-gray-100');
+    el.classList.toggle('text-gray-600');
+    el.classList.toggle('bg-blue-100');
+    el.classList.toggle('text-blue-700');
+    el.classList.toggle('border-blue-200');
+    el.classList.toggle('selected'); // Marcador lógico
+}
+
+function novoProfissional() {
+    abrirModalProfissional();
+}
+
+async function editarProfissional(id) {
+    try {
+        const response = await fetch(`/equipe/api/get/${id}/`);
+        if (!response.ok) throw new Error();
+        const dados = await response.json();
+        abrirModalProfissional(dados, id);
+    } catch (e) {
+        Swal.fire('Erro', 'Não foi possível carregar os dados.', 'error');
+    }
+}
+
+function editarDados(id) {
+    editarProfissional(id);
+}
+
+function abrirModalProfissional(dados = null, id = null) {
+    const titulo = id ? 'Editar Profissional' : 'Novo Profissional';
+    const jornadaAtual = dados ? (dados.jornada || {}) : {};
+    const fotoUrl = dados ? dados.foto_url : null;
+    const servicosIds = dados ? (dados.servicos_ids || []) : [];
+
+    // --- CONSTRÓI LISTA DE SERVIÇOS ---
+    let htmlServicos = '';
+    // Pegamos a lista de serviços do contexto do Django (renderizada no HTML)
+    const todosServicos = [
+        {% for s in servicos %}
+        {id: {{ s.id }}, nome: "{{ s.nome }}"},
+        {% endfor %}
+    ];
+    
+    if (todosServicos.length === 0) {
+        htmlServicos = '<p class="text-xs text-red-400 italic">Cadastre serviços primeiro em Serviços > Meus Serviços</p>';
+    } else {
+        htmlServicos = '<div class="flex flex-wrap gap-2">';
+        todosServicos.forEach(svc => {
+            const isSelected = servicosIds.includes(svc.id);
+            const classes = isSelected 
+                ? 'bg-blue-100 text-blue-700 border-blue-200 selected' 
+                : 'bg-gray-100 text-gray-600 border-transparent';
+            
+            htmlServicos += `
+                <div onclick="toggleServico(this)" data-id="${svc.id}" 
+                     class="cursor-pointer px-3 py-1.5 rounded-lg text-xs font-bold border transition ${classes}">
+                    ${svc.nome}
+                </div>
+            `;
+        });
+        htmlServicos += '</div>';
     }
 
-    const { value: formValues } = await Swal.fire({
-        title: `<div class="text-left border-b pb-2">${titulo}</div>`,
+    // --- CONSTRÓI LINHAS DE HORÁRIO ---
+    let htmlJornada = '';
+    
+    ORDEM_DIAS.forEach(dia => {
+        const configDiaLoja = CONFIG_LOJA[dia];
+        if (configDiaLoja && configDiaLoja.aberto) {
+            const horaEntrada = jornadaAtual[dia] ? jornadaAtual[dia].entrada : '';
+            const horaSaida = jornadaAtual[dia] ? jornadaAtual[dia].saida : '';
+            const horaIntIni = jornadaAtual[dia] ? (jornadaAtual[dia].intervalo_inicio || '') : '';
+            const horaIntFim = jornadaAtual[dia] ? (jornadaAtual[dia].intervalo_fim || '') : '';
+            
+            htmlJornada += `
+                <div class="grid grid-cols-12 gap-2 items-center border-b border-gray-100 py-2">
+                    <div class="col-span-2 text-xs font-bold text-gray-500 uppercase tracking-wide">${DIAS_MAP[dia].substring(0,3)}</div>
+                    
+                    <div class="col-span-2">
+                        <select id="entrada-${dia}" class="w-full bg-gray-50 border-0 rounded text-xs py-1 focus:ring-2 focus:ring-blue-100 cursor-pointer">
+                            ${getHorariosOptions(horaEntrada)}
+                        </select>
+                    </div>
+                    <div class="col-span-2">
+                        <select id="saida-${dia}" class="w-full bg-gray-50 border-0 rounded text-xs py-1 focus:ring-2 focus:ring-blue-100 cursor-pointer">
+                            ${getHorariosOptions(horaSaida)}
+                        </select>
+                    </div>
+                    
+                    <div class="col-span-1 text-center text-gray-300">|</div>
+                    
+                    <div class="col-span-2">
+                        <select id="int-ini-${dia}" class="w-full bg-orange-50 text-orange-800 border-0 rounded text-xs py-1 focus:ring-2 focus:ring-orange-200 cursor-pointer">
+                            ${getHorariosOptions(horaIntIni)}
+                        </select>
+                    </div>
+                    <div class="col-span-2">
+                        <select id="int-fim-${dia}" class="w-full bg-orange-50 text-orange-800 border-0 rounded text-xs py-1 focus:ring-2 focus:ring-orange-200 cursor-pointer">
+                            ${getHorariosOptions(horaIntFim)}
+                        </select>
+                    </div>
+                </div>`;
+        }
+    });
+
+    if (htmlJornada === '') {
+        htmlJornada = '<div class="p-3 bg-orange-50 text-orange-600 text-sm rounded-lg">Defina os horários da empresa primeiro.</div>';
+    }
+
+    Swal.fire({
+        title: `<span class="text-xl font-bold text-gray-900">${titulo}</span>`,
         html: `
-            <div class="text-left space-y-4 mt-4 overflow-x-hidden">
+            <div class="text-left space-y-5 px-1">
+                
+                <div class="flex flex-col items-center">
+                    <div class="relative w-24 h-24 rounded-full overflow-hidden border-4 border-gray-100 shadow-sm group cursor-pointer" onclick="document.getElementById('p-foto').click()">
+                        <div id="preview-placeholder" class="${fotoUrl ? 'hidden' : 'flex'} w-full h-full bg-gray-50 items-center justify-center text-gray-300">
+                            <i class="fa-solid fa-camera text-2xl"></i>
+                        </div>
+                        <img id="preview-foto" src="${fotoUrl || ''}" class="${fotoUrl ? '' : 'hidden'} w-full h-full object-cover">
+                        <div class="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-200">
+                            <span class="text-white text-[10px] font-bold">MUDAR</span>
+                        </div>
+                    </div>
+                    <input type="file" id="p-foto" accept="image/*" class="hidden" onchange="previewImage(this)">
+                </div>
+
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="text-xs font-bold text-gray-400">NOME</label>
-                        <input id="p-nome" class="swal2-input !m-0 !w-full" value="${dados.nome}">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nome</label>
+                        <input id="p-nome" value="${dados ? dados.nome : ''}" class="w-full bg-gray-50 border-0 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 transition">
                     </div>
                     <div>
-                        <label class="text-xs font-bold text-gray-400">ESPECIALIDADE</label>
-                        <input id="p-espec" class="swal2-input !m-0 !w-full" value="${dados.especialidade}">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Especialidade (Cargo)</label>
+                        <input id="p-esp" value="${dados ? dados.especialidade : ''}" placeholder="Ex: Barbeiro" class="w-full bg-gray-50 border-0 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 transition">
                     </div>
                 </div>
 
                 <div>
-                    <label class="text-xs font-bold text-gray-400">FOTO</label>
-                    <input id="p-foto" type="file" class="block w-full text-xs text-gray-500 mt-1 file:mr-4 file:py-1 file:px-4 file:rounded file:border-0 file:bg-blue-50 file:text-accent">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Serviços que realiza</label>
+                    ${htmlServicos}
                 </div>
 
-                <div>
-                    <label class="text-xs font-bold text-gray-400 mb-2 block">SERVIÇOS HABILITADOS</label>
-                    <div class="grid grid-cols-2 gap-2 p-2 border rounded max-h-32 overflow-y-auto">
-                        {% for s in todos_servicos %}
-                        <label class="flex items-center text-sm cursor-pointer">
-                            <input type="checkbox" name="p-servicos" value="{{ s.id }}" class="mr-2" 
-                                ${dados.servicos.includes({{ s.id }}) ? 'checked' : ''}> {{ s.nome }}
-                        </label>
-                        {% endfor %}
+                <div class="border-t border-gray-100 pt-4">
+                    <div class="flex justify-between items-end mb-3">
+                        <h4 class="text-sm font-bold text-gray-900 flex items-center gap-2">
+                            <div class="w-6 h-6 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xs"><i class="fa-regular fa-clock"></i></div>
+                            Horários & Intervalos
+                        </h4>
+                        <button id="btn-carregar-horarios" type="button" onclick="carregarHorarioLoja()" class="text-[10px] bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded-lg font-bold transition flex items-center">
+                            <i class="fa-solid fa-store mr-1.5"></i> Copiar Horário do Salão
+                        </button>
                     </div>
-                </div>
 
-                <div>
-                    <label class="text-xs font-bold text-gray-400 mb-2 block">JORNADA SEMANAL (ENTRADA/SAÍDA)</label>
-                    <div class="space-y-2">
-                        ${['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'].map(dia => {
-                            const diaCheck = dados.jornada[dia] ? 'checked' : '';
-                            const entVal = dados.jornada[dia]?.entrada || '09:00';
-                            const saiVal = dados.jornada[dia]?.saida || '18:00';
-                            return `
-                                <div class="flex items-center gap-2 bg-gray-50 p-2 rounded">
-                                    <input type="checkbox" id="check-${dia}" ${diaCheck} class="w-4 h-4">
-                                    <span class="w-8 text-[10px] font-bold uppercase">${dia}</span>
-                                    <input type="time" id="ini-${dia}" value="${entVal}" class="border rounded text-xs p-1">
-                                    <span class="text-gray-400">às</span>
-                                    <input type="time" id="fim-${dia}" value="${saiVal}" class="border rounded text-xs p-1">
-                                </div>
-                            `;
-                        }).join('')}
+                    <div class="grid grid-cols-12 gap-2 text-[10px] font-bold text-gray-400 mb-2 px-1 text-center">
+                        <div class="col-span-2 text-left">DIA</div>
+                        <div class="col-span-2">ENTRADA</div>
+                        <div class="col-span-2">SAÍDA</div>
+                        <div class="col-span-1"></div>
+                        <div class="col-span-2 text-orange-400">PAUSA INI</div>
+                        <div class="col-span-2 text-orange-400">PAUSA FIM</div>
+                    </div>
+
+                    <div class="max-h-64 overflow-y-auto pr-2 scrollbar-thin">
+                        ${htmlJornada}
                     </div>
                 </div>
             </div>
         `,
+        width: '700px',
         showCancelButton: true,
-        confirmButtonText: 'Salvar Alterações',
-        confirmButtonColor: '#3b82f6',
+        confirmButtonText: 'Salvar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#111827',
         preConfirm: () => {
-            const fd = new FormData();
-            fd.append('nome', document.getElementById('p-nome').value);
-            fd.append('especialidade', document.getElementById('p-espec').value);
-            if(document.getElementById('p-foto').files[0]) fd.append('foto', document.getElementById('p-foto').files[0]);
-            
-            document.querySelectorAll('input[name="p-servicos"]:checked').forEach(cb => fd.append('servicos[]', cb.value));
+            const nome = document.getElementById('p-nome').value;
+            if(!nome) return Swal.showValidationMessage('Nome é obrigatório');
 
-            let jornada = {};
-            ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'].forEach(dia => {
-                if(document.getElementById(`check-${dia}`).checked) {
-                    jornada[dia] = {
-                        entrada: document.getElementById(`ini-${dia}`).value,
-                        saida: document.getElementById(`fim-${dia}`).value
-                    };
+            // Captura Jornada
+            const jornada = {};
+            ORDEM_DIAS.forEach(dia => {
+                const ent = document.getElementById(`entrada-${dia}`)?.value;
+                const sai = document.getElementById(`saida-${dia}`)?.value;
+                const intIni = document.getElementById(`int-ini-${dia}`)?.value;
+                const intFim = document.getElementById(`int-fim-${dia}`)?.value;
+                
+                if (ent && sai) {
+                    jornada[dia] = { entrada: ent, saida: sai, intervalo_inicio: intIni, intervalo_fim: intFim };
                 }
             });
-            fd.append('jornada', JSON.stringify(jornada));
-            return fd;
+
+            // Captura Serviços Selecionados
+            const servicosSelecionados = [];
+            document.querySelectorAll('.selected[data-id]').forEach(el => {
+                servicosSelecionados.push(parseInt(el.getAttribute('data-id')));
+            });
+
+            const fotoInput = document.getElementById('p-foto');
+            
+            return {
+                nome: nome,
+                especialidade: document.getElementById('p-esp').value,
+                foto: fotoInput.files[0],
+                jornada_config: JSON.stringify(jornada),
+                servicos: JSON.stringify(servicosSelecionados) // Envia como JSON string
+            }
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const formData = new FormData();
+            formData.append('nome', result.value.nome);
+            formData.append('especialidade', result.value.especialidade);
+            formData.append('jornada_config', result.value.jornada_config);
+            formData.append('servicos', result.value.servicos); // Adiciona os serviços
+            
+            if (result.value.foto) {
+                formData.append('foto', result.value.foto);
+            }
+
+            const url = id ? `/equipe/api/edit/${id}/` : "/equipe/api/add/";
+            
+            fetch(url, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === 'success') location.reload();
+                else Swal.fire('Erro', data.message || 'Erro ao processar', 'error');
+            })
+            .catch(() => Swal.fire('Erro', 'Falha na comunicação.', 'error'));
         }
     });
-
-    if (formValues) {
-        fetch(urlAction, {
-            method: 'POST',
-            headers: {'X-CSRFToken': '{{ csrf_token }}'},
-            body: formValues
-        }).then(() => location.reload());
-    }
 }
 
 function excluirProfissional(id) {
     Swal.fire({
-        title: 'Tem certeza?',
-        text: "O profissional será removido permanentemente!",
+        title: 'Excluir?',
+        text: "Essa ação não pode ser desfeita.",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#ef4444',
@@ -160,10 +377,14 @@ function excluirProfissional(id) {
         if (result.isConfirmed) {
             fetch(`/equipe/api/delete/${id}/`, {
                 method: 'POST',
-                headers: {'X-CSRFToken': '{{ csrf_token }}'}
-            }).then(() => location.reload());
+                headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === 'success') location.reload();
+            });
         }
-    });
+    })
 }
 </script>
 {% endblock %}

@@ -1,16 +1,13 @@
 {% extends 'base.html' %}
-
-{% block title %}Gestão de Agendamentos - EasySchedule{% endblock %}
-
 {% block content %}
-<div class="max-w-7xl mx-auto">
+<div class="max-w-7xl mx-auto px-4">
     <div class="flex justify-between items-center mb-8">
         <div>
-            <h1 class="text-2xl font-bold text-gray-800">Agendamentos Realizados</h1>
-            <p class="text-gray-500 text-sm">Acompanhe e gerencie todos os horários marcados.</p>
+            <h1 class="text-2xl font-bold text-gray-800">Agendamentos</h1>
+            <p class="text-sm text-gray-500">Gerencie os horários marcados pelos clientes.</p>
         </div>
-        <a href="{% url 'dashboard' %}" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition flex items-center">
-            <i class="fa-solid fa-arrow-left mr-2"></i> Voltar ao Painel
+        <a href="{% url 'dashboard' %}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition flex items-center">
+            <i class="fa-solid fa-arrow-left mr-2"></i> Voltar
         </a>
     </div>
 
@@ -18,54 +15,54 @@
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>
-                    <tr class="bg-gray-50 border-b border-gray-100 text-xs text-gray-500 uppercase tracking-wider">
-                        <th class="px-6 py-4 font-bold">Data / Hora</th>
-                        <th class="px-6 py-4 font-bold">Cliente</th>
-                        <th class="px-6 py-4 font-bold">Serviço / Profissional</th>
-                        <th class="px-6 py-4 font-bold">Status</th>
-                        <th class="px-6 py-4 font-bold text-right">Ações</th>
+                    <tr class="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        <th class="px-6 py-4">Data / Hora</th>
+                        <th class="px-6 py-4">Cliente</th>
+                        <th class="px-6 py-4">Serviço / Profissional</th>
+                        <th class="px-6 py-4">Status</th>
+                        <th class="px-6 py-4 text-right">Ações</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                     {% for ag in agendamentos %}
-                    <tr class="hover:bg-blue-50 transition group">
+                    <tr class="hover:bg-blue-50 transition duration-150">
                         <td class="px-6 py-4">
-                            <div class="text-sm text-gray-800 font-medium">{{ ag.data_hora_inicio|date:"d/m/Y" }}</div>
-                            <div class="text-xs text-accent font-bold">{{ ag.data_hora_inicio|date:"H:i" }}</div>
+                            <div class="text-sm text-gray-800 font-bold">{{ ag.data_hora_inicio|date:"d/m/Y" }}</div>
+                            <div class="text-xs text-blue-600 font-bold">{{ ag.data_hora_inicio|date:"H:i" }}</div>
                         </td>
                         <td class="px-6 py-4">
                             <div class="text-sm font-bold text-gray-800">{{ ag.cliente_nome }}</div>
                             <div class="text-xs text-gray-500">{{ ag.cliente_telefone }}</div>
                         </td>
                         <td class="px-6 py-4">
-                            <div class="text-sm text-gray-700 font-semibold">{{ ag.servico.nome }}</div>
+                            <div class="text-sm text-gray-700 font-medium">{{ ag.servico.nome }}</div>
                             <div class="text-xs text-gray-500">{{ ag.profissional.nome }}</div>
                         </td>
                         <td class="px-6 py-4">
-                            <span id="status-badge-{{ ag.id }}" class="px-2 py-1 rounded-full text-[10px] font-bold uppercase 
-                                {% if ag.status == 'confirmado' %} bg-green-100 text-green-700 
-                                {% elif ag.status == 'pendente' %} bg-yellow-100 text-yellow-700 
-                                {% elif ag.status == 'cancelado' %} bg-red-100 text-red-700 
-                                {% else %} bg-gray-100 text-gray-600 {% endif %}">
-                                {{ ag.status }}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold
+                                {% if ag.status == 'confirmado' %} bg-green-100 text-green-800
+                                {% elif ag.status == 'pendente' %} bg-yellow-100 text-yellow-800
+                                {% elif ag.status == 'cancelado' %} bg-red-100 text-red-800
+                                {% else %} bg-gray-100 text-gray-800 {% endif %}">
+                                {{ ag.status|upper }}
                             </span>
                         </td>
                         <td class="px-6 py-4 text-right space-x-2">
-                            <button onclick="editarStatus('{{ ag.id }}', '{{ ag.status }}', '{{ ag.cliente_nome }}')" 
-                                    class="text-blue-400 hover:text-blue-600 font-medium text-sm" title="Editar">
-                                <i class="fa-solid fa-pen-to-square"></i>
+                            <button onclick="editarAgendamento('{{ ag.id }}', '{{ ag.status }}', '{{ ag.cliente_nome|escapejs }}')" 
+                                    class="text-blue-500 hover:text-blue-700 p-2 hover:bg-blue-100 rounded-full transition" title="Editar Status">
+                                <i class="fa-solid fa-pen"></i>
                             </button>
                             <button onclick="excluirAgendamento('{{ ag.id }}')" 
-                                    class="text-red-300 hover:text-red-500 font-medium text-sm" title="Excluir">
+                                    class="text-red-400 hover:text-red-600 p-2 hover:bg-red-100 rounded-full transition" title="Excluir Agendamento">
                                 <i class="fa-solid fa-trash"></i>
                             </button>
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="5" class="px-6 py-12 text-center text-gray-400 italic">
-                            <i class="fa-solid fa-calendar-xmark text-4xl mb-4 block"></i>
-                            Nenhum agendamento futuro encontrado.
+                        <td colspan="5" class="px-6 py-12 text-center text-gray-400 italic bg-gray-50">
+                            <i class="fa-regular fa-calendar-xmark text-4xl mb-3 block opacity-30"></i>
+                            Nenhum agendamento encontrado.
                         </td>
                     </tr>
                     {% endfor %}
@@ -76,101 +73,82 @@
 </div>
 
 <script>
-// Função para excluir agendamento
-function excluirAgendamento(id) {
+function editarAgendamento(id, currentStatus, currentNome) {
     Swal.fire({
-        title: 'Cancelar Agendamento?',
-        text: "Essa ação removerá o registro do sistema.",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#ef4444',
-        confirmButtonText: 'Sim, excluir',
-        cancelButtonText: 'Voltar'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            // URL direta
-            const url = `/gestao/api/delete/${id}/`;
-            
-            fetch(url, {
-                method: 'POST',
-                headers: {
-                    // Injeção direta do token pelo Django (Infalível)
-                    'X-CSRFToken': '{{ csrf_token }}'
-                }
-            })
-            .then(res => {
-                if (!res.ok) throw new Error("Erro na comunicação com o servidor");
-                return res.json();
-            })
-            .then(data => {
-                if(data.status === 'success') {
-                    Swal.fire('Excluído!', 'O agendamento foi removido.', 'success')
-                        .then(() => location.reload());
-                } else {
-                    Swal.fire('Erro', data.message || 'Não foi possível excluir.', 'error');
-                }
-            })
-            .catch(error => {
-                console.error("Erro JS:", error);
-                Swal.fire('Erro', 'Falha ao processar. Abra o console (F12) para ver detalhes.', 'error');
-            });
-        }
-    })
-}
-
-// Função para editar status e nome
-function editarStatus(id, currentStatus, currentNome) {
-    Swal.fire({
-        title: 'Editar Agendamento',
+        title: 'Gerenciar Agendamento',
         html: `
-            <div class="text-left">
-                <label class="text-xs font-bold text-gray-500">NOME DO CLIENTE</label>
-                <input id="swal-nome" class="swal2-input !m-0 !w-full !mb-4" value="${currentNome}">
-                
-                <label class="text-xs font-bold text-gray-500">STATUS</label>
-                <select id="swal-status" class="swal2-select !m-0 !w-full">
-                    <option value="confirmado" ${currentStatus === 'confirmado' ? 'selected' : ''}>Confirmado</option>
-                    <option value="pendente" ${currentStatus === 'pendente' ? 'selected' : ''}>Pendente</option>
-                    <option value="concluido" ${currentStatus === 'concluido' ? 'selected' : ''}>Concluído</option>
-                    <option value="cancelado" ${currentStatus === 'cancelado' ? 'selected' : ''}>Cancelado</option>
-                </select>
+            <div class="text-left space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nome do Cliente</label>
+                    <input id="ag-nome" value="${currentNome}" class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Status</label>
+                    <select id="ag-status" class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                        <option value="confirmado" ${currentStatus === 'confirmado' ? 'selected' : ''}>Confirmado</option>
+                        <option value="pendente" ${currentStatus === 'pendente' ? 'selected' : ''}>Pendente</option>
+                        <option value="concluido" ${currentStatus === 'concluido' ? 'selected' : ''}>Concluído</option>
+                        <option value="cancelado" ${currentStatus === 'cancelado' ? 'selected' : ''}>Cancelado</option>
+                    </select>
+                </div>
             </div>
         `,
         showCancelButton: true,
         confirmButtonText: 'Salvar',
+        cancelButtonText: 'Cancelar',
         confirmButtonColor: '#3b82f6',
         preConfirm: () => {
             return {
-                cliente_nome: document.getElementById('swal-nome').value,
-                status: document.getElementById('swal-status').value
+                cliente_nome: document.getElementById('ag-nome').value,
+                status: document.getElementById('ag-status').value
             }
         }
     }).then((result) => {
         if (result.isConfirmed) {
-            const url = `/gestao/api/edit/${id}/`;
-
-            fetch(url, {
+            fetch(`/gestao/api/edit/${id}/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token }}' // Token direto
+                    'X-CSRFToken': '{{ csrf_token }}'
                 },
                 body: JSON.stringify(result.value)
             })
-            .then(res => {
-                if (!res.ok) throw new Error("Erro na comunicação com o servidor");
-                return res.json();
-            })
+            .then(res => res.json())
             .then(data => {
                 if(data.status === 'success') location.reload();
-                else Swal.fire('Erro', data.message || 'Erro ao editar.', 'error');
+                else Swal.fire('Erro', data.message || 'Erro ao salvar', 'error');
             })
-            .catch(error => {
-                console.error("Erro JS:", error);
-                Swal.fire('Erro', 'Falha ao salvar. Abra o console (F12) para ver detalhes.', 'error');
-            });
+            .catch(err => Swal.fire('Erro', 'Falha na comunicação', 'error'));
         }
     });
+}
+
+function excluirAgendamento(id) {
+    Swal.fire({
+        title: 'Cancelar Agendamento?',
+        text: "Essa ação removerá o agendamento permanentemente.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#9ca3af',
+        confirmButtonText: 'Sim, excluir',
+        cancelButtonText: 'Voltar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch(`/gestao/api/delete/${id}/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    Swal.fire('Excluído!', 'Agendamento removido.', 'success').then(() => location.reload());
+                } else {
+                    Swal.fire('Erro', 'Não foi possível excluir.', 'error');
+                }
+            });
+        }
+    })
 }
 </script>
 {% endblock %}

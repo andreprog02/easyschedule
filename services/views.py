@@ -7,7 +7,6 @@ from .models import Categoria, Servico
 
 @login_required
 def config_servicos(request):
-    # Carrega categorias e serviços da empresa do usuário logado
     categorias = Categoria.objects.filter(empresa=request.user.empresa).prefetch_related('servicos')
     return render(request, 'services/config_servicos.html', {'categorias': categorias})
 
@@ -16,12 +15,30 @@ def config_servicos(request):
 @login_required
 @require_POST
 def add_categoria(request):
-    data = json.loads(request.body)
-    nome = data.get('nome')
+    # Suporte a FormData (com arquivo) e JSON
+    nome = request.POST.get('nome')
+    icone = request.FILES.get('icone')
     
+    # Fallback para JSON se não vier via POST form
+    if not nome and request.body:
+        try:
+            data = json.loads(request.body)
+            nome = data.get('nome')
+        except:
+            pass
+
     if nome:
-        categoria = Categoria.objects.create(empresa=request.user.empresa, nome=nome)
-        return JsonResponse({'status': 'success', 'id': categoria.id, 'nome': categoria.nome})
+        categoria = Categoria.objects.create(
+            empresa=request.user.empresa, 
+            nome=nome,
+            icone=icone
+        )
+        return JsonResponse({
+            'status': 'success', 
+            'id': categoria.id, 
+            'nome': categoria.nome,
+            'icone_url': categoria.icone.url if categoria.icone else None
+        })
     return JsonResponse({'status': 'error', 'message': 'Nome inválido'})
 
 @login_required
@@ -36,21 +53,43 @@ def delete_categoria(request, cat_id):
 @login_required
 @require_POST
 def add_service(request):
-    data = json.loads(request.body)
     try:
-        categoria = get_object_or_404(Categoria, id=data['categoria_id'], empresa=request.user.empresa)
+        # Pega dados via POST (FormData)
+        cat_id = request.POST.get('categoria_id')
+        nome = request.POST.get('nome')
+        preco = request.POST.get('preco')
+        tempo = request.POST.get('tempo')
+        icone = request.FILES.get('icone')
+        
+        # Fallback para JSON (caso antigo)
+        if not cat_id and request.body:
+            data = json.loads(request.body)
+            cat_id = data.get('categoria_id')
+            nome = data.get('nome')
+            preco = data.get('preco')
+            tempo = data.get('tempo')
+
+        categoria = get_object_or_404(Categoria, id=cat_id, empresa=request.user.empresa)
+        
+        # Tratamento do Preço (troca vírgula por ponto e evita vazio)
+        if preco:
+            preco = str(preco).replace(',', '.')
+            if preco.strip() == '': preco = '0.00'
+        
         servico = Servico.objects.create(
             categoria=categoria,
-            nome=data['nome'],
-            preco=data['preco'],
-            tempo_execucao=data['tempo']
+            nome=nome,
+            preco=preco,
+            tempo_execucao=tempo,
+            icone=icone
         )
         return JsonResponse({
             'status': 'success', 
             'id': servico.id,
             'nome': servico.nome,
             'preco': str(servico.preco),
-            'tempo': servico.tempo_execucao
+            'tempo': servico.tempo_execucao,
+            'icone_url': servico.icone.url if servico.icone else None
         })
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)})
@@ -59,11 +98,38 @@ def add_service(request):
 @require_POST
 def edit_service(request, service_id):
     servico = get_object_or_404(Servico, id=service_id, categoria__empresa=request.user.empresa)
-    data = json.loads(request.body)
     
-    servico.nome = data['nome']
-    servico.preco = data['preco']
-    servico.tempo_execucao = data['tempo']
+    # 1. Tenta pegar via FormData (Novo Padrão com Imagem)
+    nome = request.POST.get('nome')
+    preco = request.POST.get('preco')
+    tempo = request.POST.get('tempo')
+    icone = request.FILES.get('icone')
+
+    # 2. Se não veio nada no POST, tenta JSON (fallback)
+    if not nome and request.body:
+        try:
+            data = json.loads(request.body)
+            nome = data.get('nome')
+            preco = data.get('preco')
+            tempo = data.get('tempo')
+        except:
+            pass
+
+    # Atualização dos Campos
+    if nome: servico.nome = nome
+    if tempo: servico.tempo_execucao = tempo
+    
+    if preco is not None:
+        # Limpeza para evitar erro de Decimal (ex: converter "" para None ou 0)
+        preco_str = str(preco).replace(',', '.')
+        if preco_str.strip() == '':
+            pass # Não atualiza se estiver vazio
+        else:
+            servico.preco = preco_str
+
+    if icone:
+        servico.icone = icone
+        
     servico.save()
     
     return JsonResponse({'status': 'success'})

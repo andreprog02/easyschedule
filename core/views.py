@@ -6,6 +6,17 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_protect
 from .models import Empresa
 
+
+DIAS_SEMANA = [
+    ('seg', 'Segunda-feira'),
+    ('ter', 'Terça-feira'),
+    ('qua', 'Quarta-feira'),
+    ('qui', 'Quinta-feira'),
+    ('sex', 'Sexta-feira'),
+    ('sab', 'Sábado'),
+    ('dom', 'Domingo'),
+]
+
 def login_view(request):
     # Se o usuário já estiver logado, manda pro dashboard
     if request.user.is_authenticated:
@@ -118,6 +129,73 @@ def config_empresa(request):
         messages.success(request, "Configurações da empresa atualizadas com sucesso!")
         return redirect('config_empresa')
 
+    return render(request, 'core/config_empresa.html', {
+        'empresa': empresa,
+        'dias_formatados': dias_formatados
+    })
+
+@login_required
+def config_empresa(request):
+    # Garante que o usuário tem uma empresa criada
+    try:
+        empresa = request.user.empresa
+    except Empresa.DoesNotExist:
+        # Se não tiver, cria uma padrão ou redireciona
+        return redirect('dashboard') 
+
+    # Lógica de Salvamento (POST)
+    if request.method == 'POST':
+        # 1. Dados Básicos
+        empresa.nome = request.POST.get('nome')
+        empresa.telefone = request.POST.get('telefone')
+        empresa.email = request.POST.get('email')
+        empresa.cpf_cnpj = request.POST.get('cpf_cnpj')
+        
+        # 2. Upload de Logo
+        if request.FILES.get('logo'):
+            empresa.logo = request.FILES.get('logo')
+
+        # 3. Endereço
+        empresa.cep = request.POST.get('cep')
+        empresa.endereco = request.POST.get('endereco')
+        empresa.numero = request.POST.get('numero')
+        empresa.bairro = request.POST.get('bairro')
+        empresa.cidade = request.POST.get('cidade')
+        empresa.estado = request.POST.get('estado')
+
+        # 4. Configuração de Agendamento (NOVO CAMPO)
+        try:
+            empresa.limite_agendamento_dias = int(request.POST.get('limite_agendamento', 30))
+        except ValueError:
+            empresa.limite_agendamento_dias = 30
+
+        # 5. Horários de Funcionamento (JSON)
+        horarios = {}
+        # Mapeamento dos códigos dos dias (seg, ter...)
+        codigos_dias = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom']
+        
+        for dia in codigos_dias:
+            aberto = request.POST.get(f'aberto_{dia}') == 'on'
+            inicio = request.POST.get(f'inicio_{dia}')
+            fim = request.POST.get(f'fim_{dia}')
+            
+            horarios[dia] = {
+                'aberto': aberto,
+                'inicio': inicio,
+                'fim': fim
+            }
+        
+        empresa.horarios_padrao = horarios
+        empresa.save()
+        
+        messages.success(request, "Configurações atualizadas com sucesso!")
+        return redirect('config_empresa')
+
+    # Lógica de Exibição (GET) - IMPORTANTE: Esta parte deve estar FORA do 'if POST'
+    
+    # Prepara a lista de dias para o template
+    dias_formatados = DIAS_SEMANA
+    
     return render(request, 'core/config_empresa.html', {
         'empresa': empresa,
         'dias_formatados': dias_formatados

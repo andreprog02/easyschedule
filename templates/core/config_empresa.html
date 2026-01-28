@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
-{% load core_extras %} {% block title %}Configurações da Empresa - EasySchedule{% endblock %}
+{% load core_extras %} 
+
+{% block title %}Configurações da Empresa - EasySchedule{% endblock %}
 
 {% block content %}
 <div class="max-w-5xl mx-auto">
@@ -23,6 +25,7 @@
                 <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100">
                     <h3 class="text-lg font-bold mb-4 border-b pb-2 text-gray-700">Informações de Identidade</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        
                         <div class="md:col-span-2 flex items-center gap-6 mb-4 bg-gray-50 p-4 rounded-lg">
                             <div class="relative">
                                 {% if empresa.logo %}
@@ -52,6 +55,16 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700">E-mail de Contato</label>
                             <input type="email" name="email" value="{{ empresa.email }}" class="mt-1 block w-full border border-gray-300 rounded-md p-2 focus:ring-accent focus:border-accent">
+                        </div>
+
+                        <div class="md:col-span-2 bg-blue-50 p-3 rounded-lg border border-blue-100">
+                            <label class="block text-sm font-bold text-gray-700">
+                                <i class="fa-regular fa-calendar-days text-accent mr-1"></i> Janela de Agendamento (Dias)
+                            </label>
+                            <div class="flex items-center gap-3">
+                                <input type="number" name="limite_agendamento" value="{{ empresa.limite_agendamento_dias }}" min="1" class="mt-1 block w-24 border border-gray-300 rounded-md p-2 text-center font-bold text-accent focus:ring-accent focus:border-accent">
+                                <p class="text-xs text-gray-500 mt-1">Dias à frente que o calendário ficará disponível para os clientes.</p>
+                            </div>
                         </div>
 
                         <div class="md:col-span-2">
@@ -141,32 +154,37 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Máscaras
-        Inputmask("(99) 9 9999-9999").mask(document.getElementById("tel-mask"));
-        Inputmask("99999-999").mask(document.getElementById("cep-mask"));
+        if(document.getElementById("tel-mask")) Inputmask("(99) 9 9999-9999").mask(document.getElementById("tel-mask"));
+        if(document.getElementById("cep-mask")) Inputmask("99999-999").mask(document.getElementById("cep-mask"));
         
         var docMask = document.getElementById("doc-mask");
-        docMask.addEventListener('input', function() {
-            var val = this.value.replace(/\D/g, '');
-            var m = val.length > 11 ? "99.999.999/9999-99" : "999.999.999-99";
-            Inputmask(m).mask(this);
-        });
+        if(docMask){
+            docMask.addEventListener('input', function() {
+                var val = this.value.replace(/\D/g, '');
+                var m = val.length > 11 ? "99.999.999/9999-99" : "999.999.999-99";
+                Inputmask(m).mask(this);
+            });
+        }
 
         // Integração ViaCEP
-        document.getElementById("cep-mask").addEventListener('blur', function() {
-            var cep = this.value.replace(/\D/g, '');
-            if(cep.length === 8) {
-                fetch(`https://viacep.com.br/ws/${cep}/json/`)
-                .then(r => r.json())
-                .then(data => {
-                    if(!data.erro) {
-                        document.getElementById("endereco").value = data.logradouro;
-                        document.getElementById("bairro").value = data.bairro;
-                        document.getElementById("cidade").value = data.localidade;
-                        document.getElementById("estado").value = data.uf;
-                    }
-                });
-            }
-        });
+        var cepInput = document.getElementById("cep-mask");
+        if(cepInput){
+            cepInput.addEventListener('blur', function() {
+                var cep = this.value.replace(/\D/g, '');
+                if(cep.length === 8) {
+                    fetch(`https://viacep.com.br/ws/${cep}/json/`)
+                    .then(r => r.json())
+                    .then(data => {
+                        if(!data.erro) {
+                            document.getElementById("endereco").value = data.logradouro;
+                            document.getElementById("bairro").value = data.bairro;
+                            document.getElementById("cidade").value = data.localidade;
+                            document.getElementById("estado").value = data.uf;
+                        }
+                    });
+                }
+            });
+        }
     });
 </script>
 {% endblock %}

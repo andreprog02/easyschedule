@@ -1,8 +1,8 @@
 let calendarInstance = null;
-let currentProfessionals = []; // Armazena os dados para acesso seguro
+let currentProfessionals = []; // Armazena os dados para acesso seguro à jornada
 
 document.addEventListener('DOMContentLoaded', function() {
-    // 1. Máscara Premium de Telefone: (00) 0 0000-0000
+    // 1. Máscara Premium de Telefone
     const phoneInput = document.getElementById('client-phone');
     if(phoneInput && typeof Inputmask !== "undefined") {
         Inputmask({
@@ -12,13 +12,22 @@ document.addEventListener('DOMContentLoaded', function() {
             showMaskOnFocus: true
         }).mask(phoneInput);
     }
+    
+    // Inicializa o calendário (vazio até selecionar profissional)
     initCalendar();
 });
 
+// Estado Global do Agendamento
 const bookingState = {
-    categoriaId: null, servicoId: null, profissionalId: null,
-    data: null, hora: null, resumo: {}
+    categoriaId: null, 
+    servicoId: null, 
+    profissionalId: null,
+    data: null, 
+    hora: null, 
+    resumo: {}
 };
+
+// --- FUNÇÕES UTILITÁRIAS ---
 
 function showLoader(show) {
     const loader = document.getElementById('global-loader');
@@ -51,41 +60,65 @@ function showStep(stepNumber) {
 
 function prevStep(num) { showStep(num); }
 
-// --- PASSO 1: Selecionar Categoria ---
+// --- PASSO 1: SELECIONAR CATEGORIA ---
 function selectCategory(id) {
     bookingState.categoriaId = id;
     showLoader(true);
-    // REMOVIDO o prefixo /agendamento/ pois as urls estão na raiz
+    
+    // Busca os serviços da categoria selecionada
     fetch(`/api/get_services/?categoria_id=${id}`)
         .then(res => res.json())
         .then(data => {
             const list = document.getElementById('services-list');
-            list.innerHTML = data.map(s => `
+            
+            // GERAÇÃO DOS CARDS DE SERVIÇO (Quadrados, Centralizados e com Ícones)
+            list.innerHTML = data.map(s => {
+                // Lógica de Ícone: Usa a imagem se existir, senão usa um ícone padrão
+                const iconHtml = s.icone_url 
+                    ? `<img src="${s.icone_url}" class="w-12 h-12 object-contain mb-3 drop-shadow-sm group-hover:scale-110 transition-transform">`
+                    : `<div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 mb-3 group-hover:scale-110 transition-transform"><i class="fa-solid fa-star text-xl"></i></div>`;
+
+                return `
                 <div onclick="selectService(${s.id}, '${s.nome}', '${s.preco}', '${s.tempo}')" 
-                     class="flex justify-between items-center p-6 bg-white border border-slate-100 rounded-[2rem] cursor-pointer hover:shadow-xl hover:border-blue-500 transition-all group">
-                    <div>
-                        <h4 class="font-bold text-slate-800 group-hover:text-blue-500 transition-colors">${s.nome}</h4>
-                        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1 inline-block">${s.tempo} min</span>
+                     class="group aspect-square flex flex-col items-center justify-center p-6 bg-white border border-slate-100 rounded-[2.5rem] cursor-pointer hover:shadow-xl hover:border-blue-500 transition-all relative overflow-hidden text-center">
+                    
+                    <div class="absolute inset-0 bg-blue-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    
+                    <div class="relative z-10 flex flex-col items-center">
+                        ${iconHtml}
+                        
+                        <h4 class="font-bold text-slate-800 text-lg leading-tight group-hover:text-blue-600 transition-colors mb-1">${s.nome}</h4>
+                        
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-white/60 px-2 py-1 rounded-lg border border-slate-100 group-hover:border-blue-200 transition-colors">
+                            ${s.tempo} min
+                        </span>
+                        
+                        <div class="mt-3 text-xl font-black text-slate-900 group-hover:text-blue-700">R$ ${s.preco}</div>
                     </div>
-                    <div class="text-xl font-black text-slate-900">R$ ${s.preco}</div>
                 </div>
-            `).join('');
+                `;
+            }).join('');
+            
             showLoader(false);
             showStep(2);
-        }).catch(() => showLoader(false));
+        }).catch((err) => {
+            console.error(err);
+            showLoader(false);
+        });
 }
 
-// --- PASSO 2: Selecionar Serviço ---
+// --- PASSO 2: SELECIONAR SERVIÇO ---
 function selectService(id, nome, preco, tempo) {
     bookingState.servicoId = id;
     bookingState.resumo.servico = nome;
     bookingState.resumo.preco = preco;
     showLoader(true);
     
+    // Busca profissionais habilitados para este serviço
     fetch(`/api/get_professionals/?servico_id=${id}`)
         .then(res => res.json())
         .then(data => {
-            currentProfessionals = data; // Guarda os profissionais para o próximo passo
+            currentProfessionals = data; // Salva para uso posterior (verificação de dias úteis)
             const grid = document.getElementById('professionals-grid');
             grid.innerHTML = '';
             
@@ -93,8 +126,6 @@ function selectService(id, nome, preco, tempo) {
                 const photo = p.foto_url || `https://ui-avatars.com/api/?name=${p.nome}&background=3b82f6&color=fff&bold=true`;
                 const card = document.createElement('div');
                 card.className = "flex items-center p-6 bg-white border border-slate-100 rounded-[2rem] cursor-pointer hover:shadow-xl hover:border-blue-500 transition-all group";
-                
-                // Usamos o ID para buscar os dados da jornada de forma segura no selectProfessional
                 card.onclick = () => selectProfessional(p.id, p.nome);
                 
                 card.innerHTML = `
@@ -111,41 +142,58 @@ function selectService(id, nome, preco, tempo) {
         }).catch(() => showLoader(false));
 }
 
-// --- PASSO 3: Selecionar Profissional e Bloquear Calendário ---
+// --- PASSO 3: SELECIONAR PROFISSIONAL ---
 function selectProfessional(id, nome) {
     bookingState.profissionalId = id;
     bookingState.resumo.profissional = nome;
     
-    // Busca os dados da jornada no array que salvamos no passo anterior
+    // Lógica para desabilitar dias que o profissional NÃO trabalha
     const prof = currentProfessionals.find(p => p.id === id);
     const jornada = prof ? (prof.jornada || {}) : {};
     
     const dayMap = { 'dom': 0, 'seg': 1, 'ter': 2, 'qua': 3, 'qui': 4, 'sex': 5, 'sab': 6 };
     const workingDays = Object.keys(jornada).map(day => dayMap[day]);
 
+    // Atualiza o calendário com as regras do profissional
     if(calendarInstance) {
         calendarInstance.set('enable', [
             function(date) { 
-                // Se o profissional não tiver jornada, permite todos os dias para não travar o fluxo
-                if (workingDays.length === 0) return true;
+                if (workingDays.length === 0) return true; // Se não tiver jornada configurada, libera tudo
                 return workingDays.includes(date.getDay()); 
             }
         ]);
+        // Limpa seleção anterior
+        calendarInstance.clear();
     }
+    
+    // Limpa horários anteriores
+    document.getElementById('time-slots').innerHTML = '<div class="col-span-2 py-16 text-center text-slate-300 border-2 border-dashed border-slate-100 rounded-[2rem] italic">Escolha um dia no calendário</div>';
+    
     showStep(4);
+    
+    // Força atualização do tamanho do calendário (bug visual do flatpickr em abas ocultas)
+    setTimeout(() => calendarInstance.redraw(), 100);
 }
 
+// --- INICIALIZAÇÃO DO CALENDÁRIO ---
 function initCalendar() {
     const calEl = document.getElementById('calendar-inline');
     if(calEl) {
+        // Pega o limite definido no Template HTML. Se não existir, usa 30 dias por padrão.
+        const diasLimite = (typeof LIMITE_AGENDAMENTO_DIAS !== 'undefined') ? LIMITE_AGENDAMENTO_DIAS : 30;
+
         calendarInstance = flatpickr(calEl, {
-            inline: true, minDate: "today", locale: "pt",
+            inline: true, 
+            minDate: "today", 
+            // Limita a navegação do calendário conforme configuração da empresa
+            maxDate: new Date().fp_incr(diasLimite),
+            locale: "pt",
             onChange: (selectedDates, dateStr) => fetchTimeSlots(dateStr)
         });
     }
 }
 
-// --- PASSO 4: Consultar Horários ---
+// --- PASSO 4: CONSULTAR HORÁRIOS ---
 function fetchTimeSlots(dateStr) {
     bookingState.data = dateStr;
     const container = document.getElementById('time-slots');
@@ -155,6 +203,13 @@ function fetchTimeSlots(dateStr) {
         .then(res => res.json())
         .then(data => {
             container.innerHTML = '';
+            
+            // Tratamento de erro vindo do backend (ex: data fora do limite)
+            if(data.message) {
+                 container.innerHTML = `<div class="col-span-2 py-12 text-center text-red-400 font-bold text-sm">${data.message}</div>`;
+                 return;
+            }
+
             if(!data.slots || data.slots.length === 0) {
                 container.innerHTML = '<div class="col-span-2 py-12 text-center text-red-400 font-bold">Sem horários livres.</div>';
                 return;
@@ -167,6 +222,9 @@ function fetchTimeSlots(dateStr) {
                 else btn.disabled = true;
                 container.appendChild(btn);
             });
+        }).catch(err => {
+            console.error(err);
+            container.innerHTML = '<div class="col-span-2 py-12 text-center text-red-400 font-bold">Erro ao buscar horários.</div>';
         });
 }
 
@@ -179,6 +237,7 @@ function selectTime(hora) {
     showStep(5);
 }
 
+// --- PASSO 5: CONFIRMAR AGENDAMENTO ---
 function confirmBooking() {
     const nome = document.getElementById('client-name').value;
     const telefone = document.getElementById('client-phone').value;
@@ -205,14 +264,20 @@ function confirmBooking() {
     .then(data => {
         showLoader(false);
         if(data.status === 'success') {
-            Swal.fire('Agendado!', 'Seu horário foi reservado com sucesso.', 'success')
-                .then(() => location.reload());
+            Swal.fire({
+                title: 'Agendado!',
+                text: 'Seu horário foi reservado com sucesso.',
+                icon: 'success',
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#3b82f6'
+            }).then(() => location.reload());
         } else {
             Swal.fire('Erro', data.message, 'error');
         }
     }).catch(() => showLoader(false));
 }
 
+// Função auxiliar para pegar o token CSRF
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {

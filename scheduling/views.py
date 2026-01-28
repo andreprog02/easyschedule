@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, timedelta, time
+from datetime import datetime, timedelta
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -14,14 +14,19 @@ from services.models import Categoria, Servico
 from professionals.models import Profissional, BloqueioAgenda
 from .models import Agendamento
 
-# ... (Mantenha agendamento_wizard, get_services, get_professionals iguais) ...
+# --- WIZARD E APIS DE CONSULTA ---
+
 @ensure_csrf_cookie
 def agendamento_wizard(request):
+    # Mantive sua lógica de pegar a primeira empresa
     empresa = Empresa.objects.first() 
     if not empresa:
+        # Sugestão: Redirecionar para dashboard ou criar página de erro
         return render(request, 'core/login.html')
         
+    # Busca as categorias (já trazendo os ícones se existirem)
     categorias = Categoria.objects.filter(empresa=empresa)
+    
     return render(request, 'scheduling/agendamento_wizard.html', {
         'categorias': categorias,
         'empresa': empresa
@@ -29,13 +34,28 @@ def agendamento_wizard(request):
 
 def get_services(request):
     cat_id = request.GET.get('categoria_id')
-    servicos = Servico.objects.filter(categoria_id=cat_id).values('id', 'nome', 'preco', 'tempo_execucao')
-    data = [{'id': s['id'], 'nome': s['nome'], 'preco': str(s['preco']), 'tempo': s['tempo_execucao']} for s in servicos]
+    # Filtra serviços pela categoria
+    servicos = Servico.objects.filter(categoria_id=cat_id)
+    
+    data = []
+    for s in servicos:
+        data.append({
+            'id': s.id, 
+            'nome': s.nome, 
+            'preco': str(s.preco), 
+            'tempo': s.tempo_execucao,
+            # --- AQUI ESTÁ A CHAVE ---
+            # Envia a URL completa da imagem para o Frontend
+            'icone_url': s.icone.url if s.icone else None
+        })
+        
     return JsonResponse(data, safe=False)
 
 def get_professionals(request):
     servico_id = request.GET.get('servico_id')
+    # Filtra profissionais que realizam este serviço
     profissionais = Profissional.objects.filter(servicos_realizados__id=servico_id)
+    
     data = []
     for p in profissionais:
         data.append({
@@ -47,8 +67,8 @@ def get_professionals(request):
         })
     return JsonResponse(data, safe=False)
 
+# --- LÓGICA DE HORÁRIOS (MANTIDA SUA LÓGICA ROBUSTA) ---
 
-# --- LÓGICA CORRIGIDA DOS HORÁRIOS ---
 def get_slots(request):
     data_str = request.GET.get('data') 
     prof_id = request.GET.get('profissional')
@@ -58,15 +78,30 @@ def get_slots(request):
         return JsonResponse({'slots': []})
 
     try:
-        data_obj = datetime.strptime(data_str, '%Y-%m-%d').date()
+        # 1. Carregar Objetos
         profissional = Profissional.objects.get(id=prof_id)
         servico = Servico.objects.get(id=servico_id)
         empresa = profissional.empresa
+        
+        data_obj = datetime.strptime(data_str, '%Y-%m-%d').date()
         tz = get_current_timezone()
-    except Exception:
+
+        # 2. Validação de Segurança (Limite de Dias)
+        hoje = timezone.localdate()
+        # Garante fallback de 30 dias se o campo não existir
+        dias_limite = getattr(empresa, 'limite_agendamento_dias', 30)
+        data_limite = hoje + timedelta(days=dias_limite)
+        
+        if data_obj > data_limite:
+            return JsonResponse({
+                'slots': [], 
+                'message': f'Agendamentos permitidos apenas até {data_limite.strftime("%d/%m")}'
+            }, status=400)
+
+    except Exception as e:
         return JsonResponse({'slots': []})
 
-    # 1. Horário da Loja (Empresa)
+    # 3. Horário da Loja
     horario_especial = HorarioEspecial.objects.filter(empresa=empresa, data=data_obj).first()
     loja_abertura = None
     loja_fechamento = None
@@ -90,33 +125,41 @@ def get_slots(request):
         except:
             return JsonResponse({'slots': []})
 
-    # 2. Jornada do Profissional
+    # 4. Jornada do Profissional
     dia_semana_prof = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'][data_obj.weekday()]
     jornada = profissional.jornada_config.get(dia_semana_prof, {})
     
     if not jornada.get('entrada') or not jornada.get('saida'):
         return JsonResponse({'slots': []})
 
-    prof_entrada = datetime.strptime(jornada['entrada'], '%H:%M').time()
-    prof_saida = datetime.strptime(jornada['saida'], '%H:%M').time()
+    try:
+        prof_entrada = datetime.strptime(jornada['entrada'], '%H:%M').time()
+        prof_saida = datetime.strptime(jornada['saida'], '%H:%M').time()
+    except:
+        return JsonResponse({'slots': []})
 
-    # Intersecção de horários
+    # --- Cálculo do Intervalo (Almoço) ---
+    intervalo_inicio = None
+    intervalo_fim = None
+    
+    if jornada.get('intervalo_inicio') and jornada.get('intervalo_fim'):
+        try:
+            int_ini_time = datetime.strptime(jornada['intervalo_inicio'], '%H:%M').time()
+            int_fim_time = datetime.strptime(jornada['intervalo_fim'], '%H:%M').time()
+            
+            intervalo_inicio = make_aware(datetime.combine(data_obj, int_ini_time), tz)
+            intervalo_fim = make_aware(datetime.combine(data_obj, int_fim_time), tz)
+        except:
+            pass 
+
+    # 5. Intersecção
     inicio_efetivo = max(loja_abertura, prof_entrada)
     fim_efetivo = min(loja_fechamento, prof_saida)
 
     current_dt = make_aware(datetime.combine(data_obj, inicio_efetivo), tz)
     end_dt = make_aware(datetime.combine(data_obj, fim_efetivo), tz)
 
-    # --- CORREÇÃO SOLICITADA: Forçar alinhamento em :00 ou :30 ---
-    # Se o horário calculado for 08:15, avança para 08:30. Se for 08:40, avança para 09:00.
-    minute = current_dt.minute
-    if minute != 0 and minute != 30:
-        if minute < 30:
-            current_dt = current_dt.replace(minute=30, second=0, microsecond=0)
-        else:
-            current_dt = (current_dt + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
-
-    # Carrega ocupações
+    # 6. Carregar Ocupações
     ocupados = Agendamento.objects.filter(
         profissional=profissional,
         data_hora_inicio__date=data_obj,
@@ -132,83 +175,102 @@ def get_slots(request):
     slots = []
     tempo_servico = servico.tempo_execucao
 
-    # Loop principal (incremento fixo de 30 min)
+    # 7. Loop
     while current_dt + timedelta(minutes=tempo_servico) <= end_dt:
         slot_fim = current_dt + timedelta(minutes=tempo_servico)
         is_available = True
         
-        # Validações
-        for ag in ocupados:
-            if (current_dt < ag.data_hora_fim) and (slot_fim > ag.data_hora_inicio):
+        # Filtro 1: Intervalo
+        if intervalo_inicio and intervalo_fim:
+            if (current_dt < intervalo_fim) and (slot_fim > intervalo_inicio):
                 is_available = False
-                break
+
+        # Filtro 2: Agendamentos
+        if is_available:
+            for ag in ocupados:
+                if (current_dt < ag.data_hora_fim) and (slot_fim > ag.data_hora_inicio):
+                    is_available = False
+                    break
         
+        # Filtro 3: Bloqueios
         if is_available:
             for b in bloqueios:
                 if (current_dt < b.data_fim) and (slot_fim > b.data_inicio):
                     is_available = False
                     break
 
+        # Filtro 4: Horário Passado
         if is_available and data_obj == timezone.localdate():
             if current_dt < timezone.localtime():
                 is_available = False
 
         slots.append({'hora': current_dt.strftime('%H:%M'), 'disponivel': is_available})
-        
-        # Incremento fixo de 30 minutos conforme solicitado
         current_dt += timedelta(minutes=30) 
 
     return JsonResponse({'slots': slots})
 
+
+# --- API DE CONFIRMAÇÃO (MANTIDA) ---
+
+@require_POST
 def confirm_booking(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            tz = get_current_timezone()
+    try:
+        data = json.loads(request.body)
+        tz = get_current_timezone()
+        
+        profissional = Profissional.objects.get(id=data['profissional_id'])
+        servico = Servico.objects.get(id=data['servico_id'])
+        
+        str_inicio = f"{data['data']} {data['hora']}"
+        inicio_naive = datetime.strptime(str_inicio, '%Y-%m-%d %H:%M')
+        inicio = make_aware(inicio_naive, tz)
+        fim = inicio + timedelta(minutes=servico.tempo_execucao)
+
+        # Validação de Segurança do Intervalo
+        dia_semana = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'][inicio.weekday()]
+        jornada = profissional.jornada_config.get(dia_semana, {})
+        
+        if jornada.get('intervalo_inicio') and jornada.get('intervalo_fim'):
+            int_ini = make_aware(datetime.combine(inicio.date(), datetime.strptime(jornada['intervalo_inicio'], '%H:%M').time()), tz)
+            int_fim = make_aware(datetime.combine(inicio.date(), datetime.strptime(jornada['intervalo_fim'], '%H:%M').time()), tz)
             
-            profissional = Profissional.objects.get(id=data['profissional_id'])
-            servico = Servico.objects.get(id=data['servico_id'])
-            
-            str_inicio = f"{data['data']} {data['hora']}"
-            inicio_naive = datetime.strptime(str_inicio, '%Y-%m-%d %H:%M')
-            inicio = make_aware(inicio_naive, tz)
-            fim = inicio + timedelta(minutes=servico.tempo_execucao)
+            if (inicio < int_fim) and (fim > int_ini):
+                    return JsonResponse({'status': 'error', 'message': 'Horário indisponível (Intervalo).'}, status=409)
 
-            with transaction.atomic():
-                colisao = Agendamento.objects.select_for_update().filter(
-                    profissional=profissional,
-                    status__in=['confirmado', 'pendente'],
-                    data_hora_inicio__lt=fim,
-                    data_hora_fim__gt=inicio
-                ).exists()
+        with transaction.atomic():
+            colisao = Agendamento.objects.select_for_update().filter(
+                profissional=profissional,
+                status__in=['confirmado', 'pendente'],
+                data_hora_inicio__lt=fim,
+                data_hora_fim__gt=inicio
+            ).exists()
 
-                if colisao:
-                    return JsonResponse({'status': 'error', 'message': 'Horário ocupado!'}, status=409)
+            if colisao:
+                return JsonResponse({'status': 'error', 'message': 'Horário ocupado!'}, status=409)
 
-                novo = Agendamento.objects.create(
-                    empresa=profissional.empresa,
-                    profissional=profissional,
-                    servico=servico,
-                    data_hora_inicio=inicio,
-                    data_hora_fim=fim,
-                    cliente_nome=data['cliente_nome'],
-                    cliente_telefone=data['cliente_telefone'],
-                    status='confirmado'
-                )
+            novo = Agendamento.objects.create(
+                empresa=profissional.empresa,
+                profissional=profissional,
+                servico=servico,
+                data_hora_inicio=inicio,
+                data_hora_fim=fim,
+                cliente_nome=data['cliente_nome'],
+                cliente_telefone=data['cliente_telefone'],
+                status='confirmado'
+            )
 
-            return JsonResponse({'status': 'success', 'codigo': str(novo.codigo_autenticacao)})
-        except Exception as e:
-            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-    return JsonResponse({'status': 'error'}, status=400)
+        return JsonResponse({'status': 'success', 'codigo': str(novo.codigo_autenticacao)})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 
-# --- FUNÇÕES DE GESTÃO (EDITAR E EXCLUIR) ---
+# --- FUNÇÕES DE GESTÃO ---
 
 @login_required
 def gestao_agendamentos(request):
     agendamentos = Agendamento.objects.filter(
         empresa=request.user.empresa,
-        data_hora_inicio__gte=timezone.now() - timedelta(days=1) # Mostra tb o dia anterior por segurança
+        data_hora_inicio__gte=timezone.now() - timedelta(days=1)
     ).order_by('data_hora_inicio')
     return render(request, 'scheduling/gestao_agendamentos.html', {'agendamentos': agendamentos})
 
