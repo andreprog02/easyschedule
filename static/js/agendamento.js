@@ -23,13 +23,11 @@ const bookingState = {
 // --- FUNÇÕES DE FORMATAÇÃO (BRL e DATA) ---
 function formatMoney(valor) {
     if (!valor) return "0,00";
-    // Formata para 1.000,00
     return parseFloat(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function formatDateBR(dataISO) {
     if (!dataISO) return "";
-    // Recebe aaaa-mm-dd e devolve dd/mm/aaaa
     const [year, month, day] = dataISO.split('-');
     return `${day}/${month}/${year}`;
 }
@@ -66,7 +64,7 @@ function showStep(stepNumber) {
 
 function prevStep(num) { showStep(num); }
 
-// --- PASSO 1: SELECIONAR CATEGORIA (Cards Quadrados + Ícones) ---
+// --- PASSO 1: SELECIONAR CATEGORIA (Cards Quadrados + Ícones Grandes + Fundo Transparente) ---
 function selectCategory(id) {
     bookingState.categoriaId = id;
     showLoader(true);
@@ -76,25 +74,36 @@ function selectCategory(id) {
         .then(data => {
             const list = document.getElementById('services-list');
             
-            // GERAÇÃO DOS CARDS DE SERVIÇO (Layout Novo)
+            // GERAÇÃO DOS CARDS DE SERVIÇO
             list.innerHTML = data.map(s => {
-                const iconHtml = s.icone_url 
-                    ? `<img src="${s.icone_url}" class="w-12 h-12 object-contain mb-3 drop-shadow-sm group-hover:scale-110 transition-transform">`
-                    : `<div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 mb-3 group-hover:scale-110 transition-transform"><i class="fa-solid fa-star text-xl"></i></div>`;
+                
+                // ALTERAÇÃO AQUI: Adicionada a classe 'mix-blend-multiply'
+                // Isso faz o branco da imagem "sumir" e se misturar com o fundo do cartão
+                const iconContent = s.icone_url 
+                    ? `<img src="${s.icone_url}" class="w-full h-full object-contain drop-shadow-sm mix-blend-multiply">`
+                    : `<i class="fa-solid fa-scissors text-4xl"></i>`; 
 
                 return `
                 <div onclick="selectService(${s.id}, '${s.nome}', '${s.preco}', '${s.tempo}')" 
-                     class="group aspect-square flex flex-col items-center justify-center p-6 bg-white border border-slate-100 rounded-[2.5rem] cursor-pointer hover:shadow-xl hover:border-blue-500 transition-all relative overflow-hidden text-center">
+                     class="group aspect-square flex flex-col items-center justify-center p-4 bg-white border border-slate-100 rounded-[2.5rem] cursor-pointer hover:shadow-xl hover:border-blue-500 transition-all duration-300 relative overflow-hidden text-center">
                     
                     <div class="absolute inset-0 bg-blue-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     
-                    <div class="relative z-10 flex flex-col items-center">
-                        ${iconHtml}
-                        <h4 class="font-bold text-slate-800 text-lg leading-tight group-hover:text-blue-600 transition-colors mb-1">${s.nome}</h4>
+                    <div class="relative z-10 flex flex-col items-center w-full h-full justify-center">
+                        
+                        <div class="relative w-36 h-36 mb-2 rounded-2xl flex items-center justify-center text-blue-600 transition-transform group-hover:scale-110">
+                            ${iconContent}
+                        </div>
+
+                        <h4 class="font-bold text-slate-800 text-lg leading-tight group-hover:text-blue-600 transition-colors mb-1 line-clamp-2">
+                            ${s.nome}
+                        </h4>
+                        
                         <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-white/60 px-2 py-1 rounded-lg border border-slate-100 group-hover:border-blue-200 transition-colors">
                             ${s.tempo} min
                         </span>
-                        <div class="mt-3 text-xl font-black text-slate-900 group-hover:text-blue-700">
+                        
+                        <div class="mt-2 text-xl font-black text-slate-900 group-hover:text-blue-700">
                             R$ ${formatMoney(s.preco)}
                         </div>
                     </div>
@@ -110,7 +119,7 @@ function selectCategory(id) {
         });
 }
 
-// --- PASSO 2: SELECIONAR SERVIÇO (Exibe Profissionais - Layout Premium Restaurado) ---
+// --- PASSO 2: SELECIONAR SERVIÇO ---
 function selectService(id, nome, preco, tempo) {
     bookingState.servicoId = id;
     bookingState.resumo.servico = nome;
@@ -123,7 +132,6 @@ function selectService(id, nome, preco, tempo) {
             currentProfessionals = data; 
             const grid = document.getElementById('professionals-grid');
             
-            // Define o Grid para 3 colunas (conforme seu layout premium)
             grid.className = "grid grid-cols-2 md:grid-cols-3 gap-6";
             grid.innerHTML = '';
             
@@ -131,7 +139,6 @@ function selectService(id, nome, preco, tempo) {
                 const photo = p.foto_url || `https://ui-avatars.com/api/?name=${p.nome}&background=3b82f6&color=fff&bold=true`;
                 const card = document.createElement('div');
                 
-                // --- SEU LAYOUT PREMIUM RESTAURADO AQUI ---
                 card.className = "group bg-white border border-slate-100 rounded-[2.5rem] cursor-pointer hover:shadow-xl hover:border-blue-500 transition-all overflow-hidden flex flex-col";
                 card.onclick = () => selectProfessional(p.id, p.nome);
                 
@@ -202,7 +209,6 @@ function fetchTimeSlots(dateStr) {
     bookingState.data = dateStr;
     const container = document.getElementById('time-slots');
     
-    // Título com Data Formatada (dd/mm/aaaa)
     const displayDate = document.getElementById('selected-date-display');
     if(displayDate) displayDate.innerText = `Horários para ${formatDateBR(dateStr)}`;
 
@@ -239,12 +245,9 @@ function fetchTimeSlots(dateStr) {
 function selectTime(hora) {
     bookingState.hora = hora;
     
-    // --- RESUMO FINAL FORMATADO ---
     document.getElementById('summary-service').innerText = bookingState.resumo.servico;
     document.getElementById('summary-professional').innerText = bookingState.resumo.profissional;
-    // Data Formatada
     document.getElementById('summary-datetime').innerText = `${formatDateBR(bookingState.data)} às ${hora}`;
-    // Preço Formatado
     document.getElementById('summary-price').innerText = `R$ ${formatMoney(bookingState.resumo.preco)}`;
     
     showStep(5);

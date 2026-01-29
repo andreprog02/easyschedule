@@ -1,3 +1,6 @@
+Aqui está o arquivo `config_servicos.html` completo, com a funcionalidade de edição de categorias adicionada sem alterar o layout original:
+
+```html
 {% extends 'base.html' %}
 
 {% block title %}Meus Serviços{% endblock %}
@@ -36,6 +39,9 @@
                     <h3 class="text-lg font-bold text-gray-700">{{ categoria.nome }}</h3>
                 </div>
                 <div class="flex items-center gap-2">
+                    <button onclick="editarCategoria('{{ categoria.id }}', '{{ categoria.nome }}')" class="text-blue-400 hover:text-blue-600 px-2 transition bg-white border border-transparent hover:border-blue-100 rounded py-1" title="Editar Categoria">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                    </button>
                     <button onclick="novoServico('{{ categoria.id }}')" class="text-sm bg-white border border-gray-300 text-gray-700 px-3 py-1.5 rounded hover:bg-gray-50 transition font-medium">
                         <i class="fa-solid fa-plus text-accent mr-1"></i> Serviço
                     </button>
@@ -160,6 +166,50 @@
                 }).then(res => res.json()).then(data => {
                     if(data.status === 'success') location.reload();
                     else Swal.fire('Erro', data.message, 'error');
+                });
+            }
+        });
+    }
+
+    // --- 1.2 Editar Categoria (com Upload) Adicionado ---
+    function editarCategoria(id, nomeAtual) {
+        Swal.fire({
+            title: 'Editar Categoria',
+            html: `
+                <div class="text-left">
+                    <label class="text-xs font-bold text-gray-400 uppercase">Nome da Categoria</label>
+                    <input id="edit-cat-nome" class="swal2-input !m-0 !w-full !mb-4" value="${nomeAtual}">
+                    
+                    <label class="text-xs font-bold text-gray-400 uppercase">Alterar Ícone</label>
+                    <input type="file" id="edit-cat-icone" class="block w-full text-sm text-slate-500 mt-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Atualizar',
+            confirmButtonColor: '#3b82f6',
+            preConfirm: () => {
+                const nome = document.getElementById('edit-cat-nome').value;
+                const file = document.getElementById('edit-cat-icone').files[0];
+                
+                if (!nome) return Swal.showValidationMessage('O nome é obrigatório');
+                
+                const fd = new FormData();
+                fd.append('nome', nome);
+                if(file) fd.append('icone', file);
+                return fd;
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch(`/servicos/api/edit_categoria/${id}/`, {
+                    method: 'POST',
+                    headers: {'X-CSRFToken': getCookie('csrftoken')},
+                    body: result.value
+                }).then(res => res.json()).then(data => {
+                    if(data.status === 'success') {
+                        location.reload();
+                    } else {
+                        Swal.fire('Erro', 'Não foi possível atualizar a categoria', 'error');
+                    }
                 });
             }
         });
@@ -324,3 +374,5 @@
     }
 </script>
 {% endblock %}
+
+```

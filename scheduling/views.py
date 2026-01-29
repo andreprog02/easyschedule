@@ -53,8 +53,12 @@ def get_services(request):
 
 def get_professionals(request):
     servico_id = request.GET.get('servico_id')
-    # Filtra profissionais que realizam este serviço
-    profissionais = Profissional.objects.filter(servicos_realizados__id=servico_id)
+    
+    # O filtro continua respeitando o serviço selecionado, 
+    # mas o order_by('?') adiciona a aleatoriedade na resposta do banco de dados.
+    profissionais = Profissional.objects.filter(
+        servicos_realizados__id=servico_id
+    ).order_by('?') 
     
     data = []
     for p in profissionais:

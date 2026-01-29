@@ -19,6 +19,7 @@ class Empresa(models.Model):
     estado = models.CharField(max_length=2, verbose_name="UF", blank=True)
     cor_tema = models.CharField(max_length=7, default="#3b82f6")
     horarios_padrao = models.JSONField(default=dict, blank=True)
+    diferenciais = models.JSONField(default=list, blank=True)
     
     # Novo campo adicionado corretamente
     limite_agendamento_dias = models.PositiveIntegerField(default=30, verbose_name="Janela de Agendamento (dias)")
@@ -38,3 +39,6 @@ class HorarioEspecial(models.Model):
     abertura = models.TimeField()
     fechamento = models.TimeField()
     fechado = models.BooleanField(default=False)
+
+
+    

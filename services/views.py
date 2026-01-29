@@ -140,3 +140,25 @@ def delete_service(request, service_id):
     servico = get_object_or_404(Servico, id=service_id, categoria__empresa=request.user.empresa)
     servico.delete()
     return JsonResponse({'status': 'success'})
+
+
+@login_required
+@require_POST
+def edit_categoria(request, cat_id):
+    categoria = get_object_or_404(Categoria, id=cat_id, empresa=request.user.empresa)
+    
+    nome = request.POST.get('nome')
+    icone = request.FILES.get('icone')
+
+    if nome:
+        categoria.nome = nome
+    if icone:
+        categoria.icone = icone
+        
+    categoria.save()
+    
+    return JsonResponse({
+        'status': 'success',
+        'nome': categoria.nome,
+        'icone_url': categoria.icone.url if categoria.icone else None
+    })

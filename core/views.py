@@ -112,18 +112,38 @@ def config_empresa(request):
         if request.FILES.get('logo'):
             empresa.logo = request.FILES.get('logo')
 
-        # 4. Lógica dos Horários (Onde a mágica do filtro acontece)
+        # 4. Janela de Agendamento (Recuperando a lógica anterior)
+        try:
+            empresa.limite_agendamento_dias = int(request.POST.get('limite_agendamento', 30))
+        except (ValueError, TypeError):
+            empresa.limite_agendamento_dias = 30
+
+        # 5. Lógica dos Horários
         horarios_dict = {}
         for dia_id, _ in dias_formatados:
-            # Verifica se o checkbox "aberto" foi marcado para aquele dia
             is_aberto = request.POST.get(f'aberto_{dia_id}') == 'on'
             horarios_dict[dia_id] = {
                 'aberto': is_aberto,
                 'inicio': request.POST.get(f'inicio_{dia_id}', '08:00'),
                 'fim': request.POST.get(f'fim_{dia_id}', '18:00'),
             }
-        
         empresa.horarios_padrao = horarios_dict
+
+        # 6. Lógica dos Diferenciais (Organizada)
+        nomes = request.POST.getlist('dif_nome[]')
+        icones = request.POST.getlist('dif_icone[]')
+        
+        lista_dif = []
+        for nome, icone in zip(nomes, icones):
+            if nome.strip(): # Só adiciona se tiver preenchido o nome
+                lista_dif.append({
+                    'nome': nome.strip(),
+                    'icone': icone.strip() if icone else 'fa-star' # Fallback para um ícone padrão
+                })
+        
+        empresa.diferenciais = lista_dif[:8] # Aplica o limite de 8 itens
+        
+        # Salva todas as alterações de uma vez
         empresa.save()
         
         messages.success(request, "Configurações da empresa atualizadas com sucesso!")
@@ -133,6 +153,7 @@ def config_empresa(request):
         'empresa': empresa,
         'dias_formatados': dias_formatados
     })
+
 
 @login_required
 def config_empresa(request):

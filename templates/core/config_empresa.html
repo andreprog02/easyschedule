@@ -75,6 +75,34 @@
                 </div>
 
                 <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100">
+                    <h3 class="text-lg font-bold mb-2 border-b pb-2 text-gray-700">Diferenciais e Comodidades</h3>
+                    <p class="text-xs text-gray-500 mb-6">Exiba até 8 benefícios para atrair seus clientes (ex: WiFi, Café, Estacionamento).</p>
+                    
+                    <div id="container-diferenciais" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {% for dif in empresa.diferenciais %}
+                        <div class="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200 group">
+                            <div class="w-10">
+                                <input type="text" name="dif_icone[]" value="{{ dif.icone }}" placeholder="fa-wifi" class="w-full border border-gray-300 rounded p-1.5 text-xs text-center font-mono focus:ring-accent" title="Classe FontAwesome">
+                            </div>
+                            <div class="flex-1">
+                                <input type="text" name="dif_nome[]" value="{{ dif.nome }}" placeholder="WiFi Grátis" class="w-full border border-gray-300 rounded p-1.5 text-xs focus:ring-accent">
+                            </div>
+                            <button type="button" onclick="this.parentElement.remove()" class="text-red-400 hover:text-red-600 transition p-1">
+                                <i class="fa-solid fa-circle-xmark"></i>
+                            </button>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <button type="button" onclick="addDiferencial()" class="mt-6 flex items-center gap-2 text-accent font-bold text-sm hover:text-blue-700 transition">
+                        <div class="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center">
+                            <i class="fa-solid fa-plus"></i>
+                        </div>
+                        Adicionar Novo Diferencial
+                    </button>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100">
                     <h3 class="text-lg font-bold mb-4 border-b pb-2 text-gray-700">Localização</h3>
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div>
@@ -152,6 +180,30 @@
 
 {% block scripts %}
 <script>
+    // Função para adicionar linha de diferencial
+    function addDiferencial() {
+        const container = document.getElementById('container-diferenciais');
+        if (container.children.length >= 8) {
+            Swal.fire('Limite atingido', 'Você pode adicionar no máximo 8 diferenciais.', 'info');
+            return;
+        }
+
+        const div = document.createElement('div');
+        div.className = 'flex items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200 animate-fade-in';
+        div.innerHTML = `
+            <div class="w-10">
+                <input type="text" name="dif_icone[]" placeholder="fa-coffee" class="w-full border border-gray-300 rounded p-1.5 text-xs text-center font-mono focus:ring-accent">
+            </div>
+            <div class="flex-1">
+                <input type="text" name="dif_nome[]" placeholder="Café Cortesia" class="w-full border border-gray-300 rounded p-1.5 text-xs focus:ring-accent">
+            </div>
+            <button type="button" onclick="this.parentElement.remove()" class="text-red-400 hover:text-red-600 transition p-1">
+                <i class="fa-solid fa-circle-xmark"></i>
+            </button>
+        `;
+        container.appendChild(div);
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         // Máscaras
         if(document.getElementById("tel-mask")) Inputmask("(99) 9 9999-9999").mask(document.getElementById("tel-mask"));
