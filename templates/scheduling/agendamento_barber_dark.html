@@ -1,12 +1,27 @@
+Você tem toda razão. O motivo de o "V" ter virado um "X" é que, ao forçarmos o tamanho `width: 4em` e `height: 4em` manualmente no CSS, nós "esmagamos" a caixa do ícone, mas as linhas de dentro (que formam o V) continuaram com o tamanho original em pixels, fazendo elas se cruzarem.
+
+**A Solução:**
+Em vez de definir largura e altura fixas, vamos usar `transform: scale(0.7)`. Isso reduz o ícone proporcionalmente (como dar um zoom out), mantendo o desenho do "V" perfeito e alinhado.
+
+Aqui está o código completo corrigido. Substitua seu arquivo inteiro novamente para garantir que tudo fique alinhado:
+
+```html
 {% extends 'base.html' %}
 {% load static %}
 
 {% block title %}Agendamento | {{ empresa.nome }}{% endblock %}
 
+{# --- REMOVE A BARRA DE NAVEGAÇÃO SUPERIOR DO BASE.HTML --- #}
+{% block navbar %}{% endblock %}
+{% block header %}{% endblock %}
+
 {% block head %}
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Manrope:wght@300;400;600;700&display=swap" rel="stylesheet">
 
 <style>
+    /* --- REMOÇÃO FORÇADA DE NAVBARS --- */
+    nav, header, .navbar { display: none !important; }
+
     /* --- OVERRIDES GERAIS DARK MODE --- */
     body { 
         font-family: 'Manrope', sans-serif; 
@@ -22,15 +37,113 @@
     ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: #fbbf24; }
 
-    /* --- ANIMAÇÕES DE TRANSIÇÃO (BOUNCE) --- */
-    .step-content {
-        display: none; /* Escondido por padrão */
-        animation-duration: 0.8s;
-        animation-fill-mode: forwards;
-        animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1); /* Efeito elástico */
+    /* --- SWEETALERT2 CORRIGIDO (BARRA NO TOPO + ÍCONE PERFEITO) --- */
+    div:where(.swal2-container) div:where(.swal2-popup) {
+        background: #18181b !important;
+        border: 1px solid #27272a;
+        border-radius: 16px !important;
+        width: 320px !important;
+        padding: 0 !important;
+        font-family: 'Manrope', sans-serif !important;
+        
+        /* MÁGICA DO LAYOUT: Transforma em Flex Coluna para reordenar */
+        display: flex !important;
+        flex-direction: column !important; 
+        overflow: hidden !important; 
     }
 
-    /* Garantir que o ativo seja visível se não houver animação rodando */
+    /* 1. BARRA DE TÍTULO (Agora fica fixa no topo) */
+    div:where(.swal2-container) h2:where(.swal2-title) {
+        order: -1 !important; /* O pulo do gato: Força ser o 1º elemento */
+        background-color: #fbbf24 !important;
+        color: #000 !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 12px 0 !important;
+        font-family: 'Playfair Display', serif !important;
+        font-size: 1.1rem !important;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        z-index: 10;
+    }
+
+    /* 2. ÍCONE "V" (Ajustado com SCALE para não quebrar o desenho) */
+    div:where(.swal2-container) div:where(.swal2-icon) {
+        order: 0 !important;
+        margin-top: 25px !important; /* Espaço da barra */
+        margin-bottom: 5px !important;
+        
+        /* CORREÇÃO CRÍTICA DO "X": 
+           Não forçamos width/height. Usamos scale para reduzir. 
+           Isso mantém a geometria interna do V perfeita. */
+        transform: scale(0.7) !important; 
+        border-width: 3px !important; 
+    }
+
+    /* Cores do Ícone Sucesso */
+    div:where(.swal2-icon).swal2-success {
+        border-color: #fbbf24 !important; /* Anel Dourado */
+        color: #fbbf24 !important;
+    }
+    div:where(.swal2-icon).swal2-success [class^=swal2-success-line] {
+        background-color: #fbbf24 !important; 
+    }
+    div:where(.swal2-icon).swal2-success [class^=swal2-success-ring] {
+        border: .25em solid rgba(251, 191, 36, 0.2) !important; 
+    }
+
+    /* --- CORREÇÃO DAS MÁSCARAS (A MÁGICA DO DARK MODE) --- */
+    /* Usamos a MESMA cor do fundo (#18181b) para a animação funcionar sem fundo branco */
+    div:where(.swal2-icon).swal2-success .swal2-success-fix {
+        background-color: #18181b !important; 
+    }
+    div:where(.swal2-icon).swal2-success .swal2-success-circular-line-left,
+    div:where(.swal2-icon).swal2-success .swal2-success-circular-line-right {
+        background-color: #18181b !important;
+    }
+
+    /* 3. CONTEÚDO (Texto da mensagem) */
+    div:where(.swal2-container) div:where(.swal2-html-container) {
+        order: 1 !important;
+        color: #a1a1aa !important; /* Cinza suave */
+        font-size: 0.9rem !important;
+        margin: 0 20px 20px 20px !important;
+    }
+
+    /* 4. BOTÃO DE AÇÃO (Confirmar) */
+    div:where(.swal2-container) .swal2-actions {
+        order: 2 !important;
+        margin-bottom: 20px !important;
+        width: 100%;
+        justify-content: center;
+    }
+
+    div:where(.swal2-container) button:where(.swal2-styled).swal2-confirm {
+        background-color: #fbbf24 !important;
+        color: #000 !important;
+        font-weight: 800 !important;
+        border-radius: 8px !important;
+        padding: 12px 30px !important;
+        text-transform: uppercase;
+        font-size: 0.8rem !important;
+        letter-spacing: 1px;
+        box-shadow: none !important;
+    }
+    
+    div:where(.swal2-container) button:where(.swal2-styled).swal2-confirm:hover {
+        background-color: #f59e0b !important;
+    }
+
+    /* --- ANIMAÇÕES DE TRANSIÇÃO (BOUNCE) --- */
+    .step-content {
+        display: none;
+        animation-duration: 0.8s;
+        animation-fill-mode: forwards;
+        animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
     .step-content.active {
         display: block;
         opacity: 1;
@@ -333,8 +446,8 @@
                 const grid = document.getElementById('professionals-grid');
                 
                 if (!data || data.length === 0) {
-                     Swal.fire('Ops!', 'Não encontramos profissionais para este serviço no momento.', 'warning');
-                     return;
+                      Swal.fire('Ops!', 'Não encontramos profissionais para este serviço no momento.', 'warning');
+                      return;
                 }
 
                 grid.innerHTML = data.map(p => `
@@ -383,8 +496,8 @@
             .then(data => {
                 container.innerHTML = '';
                 if(data.message || !data.slots || data.slots.length === 0) {
-                     container.innerHTML = `<div class="col-span-2 py-12 text-center text-gray-500 border border-dashed border-dark-border rounded-xl text-sm">Agenda lotada ou indisponível.</div>`;
-                     return;
+                      container.innerHTML = `<div class="col-span-2 py-12 text-center text-gray-500 border border-dashed border-dark-border rounded-xl text-sm">Agenda lotada ou indisponível.</div>`;
+                      return;
                 }
 
                 data.slots.forEach(slot => {
