@@ -1,101 +1,130 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-4xl w-full space-y-8 bg-white p-10 rounded-xl shadow-2xl">
+<div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
+    <div class="max-w-4xl w-full space-y-8 bg-white p-10 rounded-xl shadow-2xl border border-gray-100">
         
         <div class="text-center">
-            <h2 class="mt-6 text-3xl font-extrabold text-gray-900">Cadastre seu Negócio</h2>
-            <p class="mt-2 text-sm text-gray-600">Crie sua conta e comece a receber agendamentos hoje mesmo.</p>
+            <h2 class="mt-2 text-3xl font-extrabold text-gray-900 tracking-tight">Cadastre seu Negócio</h2>
+            <p class="mt-2 text-sm text-gray-500">Crie sua conta e comece a organizar sua agenda hoje mesmo.</p>
         </div>
 
-        <form class="mt-8 space-y-6" id="form-cadastro" method="POST">
+        {% if messages %}
+            <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-md shadow-sm">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fa-solid fa-circle-exclamation text-red-500"></i>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">Atenção:</h3>
+                        <div class="mt-2 text-sm text-red-700">
+                            <ul class="list-disc pl-5 space-y-1">
+                                {% for message in messages %}
+                                    <li>{{ message }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        <form class="mt-8 space-y-8" id="form-cadastro" method="POST">
             {% csrf_token %}
             
-            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                <h3 class="text-lg font-medium text-gray-900 mb-4 border-b pb-2">1. Dados de Acesso</h3>
+            <div class="bg-white p-6 rounded-lg border border-gray-200 hover:border-accent transition-colors duration-300">
+                <h3 class="text-lg font-bold text-gray-900 mb-6 flex items-center">
+                    <span class="bg-accent text-white w-8 h-8 rounded-full flex items-center justify-center text-sm mr-3">1</span>
+                    Dados de Acesso
+                </h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Nome da Empresa *</label>
-                        <input type="text" name="nome_empresa" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-accent focus:border-accent">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nome da Empresa <span class="text-red-500">*</span></label>
+                        <input type="text" name="nome_empresa" required placeholder="Ex: Barbearia do André" class="block w-full border border-gray-300 rounded-md shadow-sm py-2.5 px-3 focus:ring-accent focus:border-accent sm:text-sm transition">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">E-mail (Login) *</label>
-                        <input type="email" name="email" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-accent focus:border-accent">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">E-mail (Login) <span class="text-red-500">*</span></label>
+                        <input type="email" name="email" required placeholder="seu@email.com" class="block w-full border border-gray-300 rounded-md shadow-sm py-2.5 px-3 focus:ring-accent focus:border-accent sm:text-sm transition">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Senha *</label>
-                        <input type="password" name="senha" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-accent focus:border-accent">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Senha <span class="text-red-500">*</span></label>
+                        <input type="password" name="senha" required class="block w-full border border-gray-300 rounded-md shadow-sm py-2.5 px-3 focus:ring-accent focus:border-accent sm:text-sm transition">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Confirmar Senha *</label>
-                        <input type="password" name="senha_confirma" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-accent focus:border-accent">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Confirmar Senha <span class="text-red-500">*</span></label>
+                        <input type="password" name="senha_confirma" required class="block w-full border border-gray-300 rounded-md shadow-sm py-2.5 px-3 focus:ring-accent focus:border-accent sm:text-sm transition">
                     </div>
                 </div>
             </div>
 
-            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                <h3 class="text-lg font-medium text-gray-900 mb-4 border-b pb-2">2. Informações da Empresa</h3>
+            <div class="bg-white p-6 rounded-lg border border-gray-200 hover:border-accent transition-colors duration-300">
+                <h3 class="text-lg font-bold text-gray-900 mb-6 flex items-center">
+                    <span class="bg-accent text-white w-8 h-8 rounded-full flex items-center justify-center text-sm mr-3">2</span>
+                    Informações da Empresa
+                </h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Telefone / WhatsApp *</label>
-                        <input type="text" id="telefone" name="telefone" required placeholder="(24) 9 9216-4962" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-accent focus:border-accent">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Telefone / WhatsApp <span class="text-red-500">*</span></label>
+                        <input type="text" id="telefone" name="telefone" required placeholder="(99) 9 9999-9999" class="block w-full border border-gray-300 rounded-md shadow-sm py-2.5 px-3 focus:ring-accent focus:border-accent sm:text-sm transition">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">CPF ou CNPJ *</label>
-                        <input type="text" id="cpf_cnpj" name="cpf_cnpj" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-accent focus:border-accent">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">CPF ou CNPJ <span class="text-red-500">*</span></label>
+                        <input type="text" id="cpf_cnpj" name="cpf_cnpj" required class="block w-full border border-gray-300 rounded-md shadow-sm py-2.5 px-3 focus:ring-accent focus:border-accent sm:text-sm transition">
                     </div>
                 </div>
             </div>
 
-            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                <h3 class="text-lg font-medium text-gray-900 mb-4 border-b pb-2">3. Endereço</h3>
+            <div class="bg-white p-6 rounded-lg border border-gray-200 hover:border-accent transition-colors duration-300">
+                <h3 class="text-lg font-bold text-gray-900 mb-6 flex items-center">
+                    <span class="bg-accent text-white w-8 h-8 rounded-full flex items-center justify-center text-sm mr-3">3</span>
+                    Endereço
+                </h3>
                 
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-4">
                     <div class="md:col-span-1">
-                        <label class="block text-sm font-medium text-gray-700">CEP *</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">CEP <span class="text-red-500">*</span></label>
                         <div class="relative">
-                            <input type="text" id="cep" name="cep" required placeholder="27277-210" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-accent focus:border-accent">
-                            <div id="loading-cep" class="hidden absolute right-2 top-3 text-accent">
-                                <i class="fa-solid fa-spinner fa-spin"></i>
+                            <input type="text" id="cep" name="cep" required placeholder="00000-000" class="block w-full border border-gray-300 rounded-md shadow-sm py-2.5 px-3 focus:ring-accent focus:border-accent sm:text-sm transition">
+                            <div id="loading-cep" class="hidden absolute right-3 top-3 text-accent">
+                                <i class="fa-solid fa-circle-notch fa-spin"></i>
                             </div>
                         </div>
                     </div>
                     <div class="md:col-span-2">
-                        <label class="block text-sm font-medium text-gray-700">Endereço (Rua)</label>
-                        <input type="text" id="endereco" name="endereco" readonly class="mt-1 block w-full bg-gray-100 border border-gray-300 rounded-md shadow-sm p-2 cursor-not-allowed">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Endereço (Rua)</label>
+                        <input type="text" id="endereco" name="endereco" readonly class="block w-full bg-gray-50 border border-gray-300 rounded-md shadow-sm py-2.5 px-3 text-gray-500 cursor-not-allowed sm:text-sm">
                     </div>
                     <div class="md:col-span-1">
-                        <label class="block text-sm font-medium text-gray-700">Número *</label>
-                        <input type="text" name="numero" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-accent focus:border-accent">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Número <span class="text-red-500">*</span></label>
+                        <input type="text" name="numero" required class="block w-full border border-gray-300 rounded-md shadow-sm py-2.5 px-3 focus:ring-accent focus:border-accent sm:text-sm transition">
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Complemento</label>
-                        <input type="text" name="complemento" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-accent focus:border-accent">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Complemento</label>
+                        <input type="text" name="complemento" class="block w-full border border-gray-300 rounded-md shadow-sm py-2.5 px-3 focus:ring-accent focus:border-accent sm:text-sm transition">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Bairro</label>
-                        <input type="text" id="bairro" name="bairro" readonly class="mt-1 block w-full bg-gray-100 border border-gray-300 rounded-md shadow-sm p-2 cursor-not-allowed">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Bairro</label>
+                        <input type="text" id="bairro" name="bairro" readonly class="block w-full bg-gray-50 border border-gray-300 rounded-md shadow-sm py-2.5 px-3 text-gray-500 cursor-not-allowed sm:text-sm">
                     </div>
-                    <div class="grid grid-cols-3 gap-2">
+                    <div class="grid grid-cols-3 gap-3">
                         <div class="col-span-2">
-                            <label class="block text-sm font-medium text-gray-700">Cidade</label>
-                            <input type="text" id="cidade" name="cidade" readonly class="mt-1 block w-full bg-gray-100 border border-gray-300 rounded-md shadow-sm p-2 cursor-not-allowed">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Cidade</label>
+                            <input type="text" id="cidade" name="cidade" readonly class="block w-full bg-gray-50 border border-gray-300 rounded-md shadow-sm py-2.5 px-3 text-gray-500 cursor-not-allowed sm:text-sm">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">UF</label>
-                            <input type="text" id="estado" name="estado" readonly class="mt-1 block w-full bg-gray-100 border border-gray-300 rounded-md shadow-sm p-2 cursor-not-allowed">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">UF</label>
+                            <input type="text" id="estado" name="estado" readonly class="block w-full bg-gray-50 border border-gray-300 rounded-md shadow-sm py-2.5 px-3 text-gray-500 cursor-not-allowed sm:text-sm">
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="flex items-center justify-end">
-                <button type="submit" class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-accent hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition shadow-lg">
-                    Criar Conta
+            <div class="pt-4">
+                <button type="submit" class="w-full flex justify-center py-4 px-4 border border-transparent text-sm font-bold rounded-md text-white bg-accent hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                    CRIAR MINHA CONTA
                 </button>
             </div>
         </form>
@@ -104,6 +133,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/5.0.8/jquery.inputmask.min.js"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         // 1. Máscaras
@@ -141,12 +171,13 @@
                             // Foca no número
                             document.querySelector('input[name="numero"]').focus();
                         } else {
-                            Swal.fire('Erro', 'CEP não encontrado.', 'error');
+                            Swal.fire('Ops!', 'CEP não encontrado.', 'warning');
                         }
                     })
                     .catch(() => {
                         document.getElementById('loading-cep').classList.add('hidden');
-                        Swal.fire('Erro', 'Falha ao buscar CEP.', 'error');
+                        // Falha silenciosa ou alerta suave
+                        console.error('Erro no ViaCEP');
                     });
             }
         });

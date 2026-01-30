@@ -73,19 +73,17 @@ def disparar_whatsapp_thread(agendamento_id, tipo='confirmacao'):
 # --- WIZARD E APIS DE CONSULTA ---
 
 @ensure_csrf_cookie
-def agendamento_wizard(request):
-    # 1. Busca a empresa
-    empresa = Empresa.objects.first() 
+def agendamento_wizard(request, empresa_slug):
+    # 1. Busca a empresa ESPECÍFICA pelo slug
+    # Se o slug não existir, retorna erro 404 (Página não encontrada) automaticamente
+    empresa = get_object_or_404(Empresa, slug=empresa_slug)
     
-    if not empresa:
-        return render(request, 'core/login.html')
-        
-    # 2. Busca categorias
+    # 2. Busca categorias APENAS dessa empresa
     categorias = Categoria.objects.filter(empresa=empresa)
     
     # --- Lógica de Seleção de Tema ---
     
-    # Recupera o tema escolhido (com fallback para 'padrao' se o campo não existir ainda)
+    # Recupera o tema escolhido (com fallback para 'padrao')
     tema = getattr(empresa, 'template_tema', 'padrao')
     
     if tema == 'feminino':
@@ -96,7 +94,7 @@ def agendamento_wizard(request):
         # Tema Padrão (Azul)
         nome_template = 'scheduling/agendamento_wizard.html'
     
-    # 3. Renderiza o template decidido acima
+    # 3. Renderiza o template decidido acima com os dados da empresa correta
     return render(request, nome_template, {
         'categorias': categorias,
         'empresa': empresa

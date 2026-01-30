@@ -26,15 +26,18 @@ def cadastro_usuario(request):
     if request.method == 'POST':
         data = request.POST
         
+        # 1. Validação de Senha
         if data['senha'] != data['senha_confirma']:
             messages.error(request, "As senhas não conferem.")
             return render(request, 'core/cadastro_usuario.html')
         
+        # 2. Validação de Email Duplicado
         if User.objects.filter(username=data['email']).exists():
-            messages.error(request, "Este e-mail já está cadastrado.")
+            messages.error(request, "Este e-mail já está cadastrado. Tente fazer login ou use outro e-mail.")
             return render(request, 'core/cadastro_usuario.html')
 
         try:
+            # Cria o Usuário
             user = User.objects.create_user(
                 username=data['email'],
                 email=data['email'],
@@ -42,8 +45,9 @@ def cadastro_usuario(request):
                 first_name=data['nome_empresa']
             )
             
+            # Cria a Empresa (CORRIGIDO)
             Empresa.objects.create(
-                dono=user,
+                dono=user,  # <--- VOLTAMOS PARA 'dono' (como está no seu models.py)
                 nome=data['nome_empresa'],
                 email=data['email'],
                 telefone=data['telefone'],
@@ -51,7 +55,8 @@ def cadastro_usuario(request):
                 cep=data['cep'],
                 endereco=data['endereco'],
                 numero=data['numero'],
-                complemento=data.get('complemento', ''),
+                # REMOVIDO: complemento=data.get('complemento', ''), 
+                # (O campo complemento não existe no seu models.py, então não salvamos)
                 bairro=data['bairro'],
                 cidade=data['cidade'],
                 estado=data['estado']
@@ -61,10 +66,12 @@ def cadastro_usuario(request):
             return redirect('dashboard') 
             
         except Exception as e:
-            messages.error(request, f"Erro ao cadastrar: {str(e)}")
+            print(f"❌ ERRO GRAVE NO CADASTRO: {e}")
+            messages.error(request, f"Erro interno: {str(e)}")
             return render(request, 'core/cadastro_usuario.html')
 
     return render(request, 'core/cadastro_usuario.html')
+
 
 @login_required
 def dashboard(request):

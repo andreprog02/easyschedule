@@ -20,7 +20,7 @@
             </div>
         </div>
         <div class="mt-4 md:mt-0 flex gap-3">
-            <a href="{% url 'agendamento_home' %}" target="_blank" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition shadow-md flex items-center">
+            <a href="{% url 'agendamento_publico' empresa.slug %}" target="_blank" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition shadow-md flex items-center">
                 <i class="fa-solid fa-external-link-alt mr-2"></i> Ver Site
             </a>
             <form action="{% url 'logout' %}" method="post" class="inline">
@@ -86,7 +86,18 @@
                 <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Empresa</span>
             </div>
             <h3 class="text-lg font-bold text-gray-800">Configurações Gerais</h3>
-            <p class="text-gray-500 text-xs mt-2 leading-relaxed">Altere logotipo, telefone, endereço e os horários padrão da loja.</p>
+            <p class="text-gray-500 text-xs mt-2 leading-relaxed">Altere logotipo, telefone, endereço, tema visual e os horários padrão da loja.</p>
+        </a>
+
+        <a href="{% url 'config_whatsapp' %}" class="bg-white p-6 rounded-xl shadow-md hover:shadow-xl transition transform hover:-translate-y-1 group border-l-4 border-teal-500">
+            <div class="flex items-center justify-between mb-4">
+                <div class="bg-teal-50 p-3 rounded-full text-teal-600 group-hover:bg-teal-600 group-hover:text-white transition">
+                    <i class="fa-brands fa-whatsapp text-xl"></i>
+                </div>
+                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Automação</span>
+            </div>
+            <h3 class="text-lg font-bold text-gray-800">Notificações WhatsApp</h3>
+            <p class="text-gray-500 text-xs mt-2 leading-relaxed">Configure as mensagens automáticas de confirmação e lembretes para clientes.</p>
         </a>
 
     </div>
