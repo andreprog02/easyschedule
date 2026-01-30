@@ -1,0 +1,467 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Agendamento | {{ empresa.nome }}{% endblock %}
+
+{% block head %}
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Manrope:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<style>
+    /* --- OVERRIDES GERAIS DARK MODE --- */
+    body { 
+        font-family: 'Manrope', sans-serif; 
+        background-color: #09090b !important; /* Zinc-950 */
+        color: #e4e4e7;
+        overflow-x: hidden;
+    }
+    h1, h2, h3, h4, .font-serif { font-family: 'Playfair Display', serif; }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #18181b; }
+    ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #fbbf24; }
+
+    /* --- ANIMAÇÕES DE TRANSIÇÃO (BOUNCE) --- */
+    .step-content {
+        display: none; /* Escondido por padrão */
+        animation-duration: 0.8s;
+        animation-fill-mode: forwards;
+        animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1); /* Efeito elástico */
+    }
+
+    /* Garantir que o ativo seja visível se não houver animação rodando */
+    .step-content.active {
+        display: block;
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+
+    @keyframes slideInRightBounce {
+        0% { opacity: 0; transform: translateX(60px) scale(0.95); }
+        100% { opacity: 1; transform: translateX(0) scale(1); }
+    }
+
+    @keyframes slideInLeftBounce {
+        0% { opacity: 0; transform: translateX(-60px) scale(0.95); }
+        100% { opacity: 1; transform: translateX(0) scale(1); }
+    }
+
+    .step-enter-right {
+        display: block !important;
+        animation-name: slideInRightBounce;
+    }
+
+    .step-enter-left {
+        display: block !important;
+        animation-name: slideInLeftBounce;
+    }
+
+    /* --- FLATPICKR (CALENDÁRIO) DARK GOLD --- */
+    .flatpickr-calendar {
+        background: #18181b !important;
+        border: 1px solid #27272a !important;
+        box-shadow: 0 20px 40px -5px rgba(0,0,0,0.5) !important;
+        border-radius: 24px !important;
+        padding: 16px !important;
+        width: 100% !important;
+        max-width: 400px;
+        margin: 0 auto;
+    }
+    .flatpickr-months { border-bottom: 1px solid #27272a; padding-bottom: 10px; margin-bottom: 10px; }
+    .flatpickr-month { color: #fbbf24 !important; fill: #fbbf24 !important; }
+    .flatpickr-current-month .flatpickr-monthDropdown-months, .flatpickr-current-month input.cur-year {
+        color: #fff !important; font-family: 'Playfair Display', serif; font-weight: 700;
+    }
+    .flatpickr-weekday { color: #71717a !important; font-weight: 600 !important; text-transform: uppercase; font-size: 11px; letter-spacing: 1px; }
+    .flatpickr-day { color: #d4d4d8 !important; border-radius: 12px !important; font-weight: 500; transition: all 0.2s ease; border: 1px solid transparent !important; }
+    .flatpickr-day.flatpickr-disabled { color: #27272a !important; opacity: 0.5; }
+    .flatpickr-day:hover { background: #27272a !important; border-color: #3f3f46 !important; }
+    .flatpickr-day.selected { background: #fbbf24 !important; color: #000 !important; font-weight: 800; box-shadow: 0 0 15px rgba(251, 191, 36, 0.4) !important; }
+    .flatpickr-prev-month, .flatpickr-next-month { fill: #fbbf24 !important; }
+    .flatpickr-prev-month:hover svg, .flatpickr-next-month:hover svg { fill: #fff !important; }
+
+    /* --- CATEGORIA ATIVA --- */
+    .cat-btn.active {
+        background-color: #fbbf24;
+        color: #000;
+        border-color: #fbbf24;
+        box-shadow: 0 0 20px rgba(251, 191, 36, 0.2);
+        transform: translateY(-1px);
+    }
+</style>
+
+<script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                colors: {
+                    dark: { bg: '#09090b', card: '#18181b', border: '#27272a' },
+                    gold: { DEFAULT: '#fbbf24', hover: '#f59e0b', dim: 'rgba(251, 191, 36, 0.05)' }
+                }
+            }
+        }
+    }
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-dark-bg flex flex-col items-center py-10 px-4">
+
+    <div class="text-center mb-12 animate-fade-in">
+        {% if empresa.logo %}
+            <img src="{{ empresa.logo.url }}" class="w-20 h-20 mx-auto rounded-full object-cover border-2 border-dark-border mb-4 shadow-lg">
+        {% else %}
+            <div class="w-16 h-16 bg-gold/10 text-gold rounded-full flex items-center justify-center mx-auto mb-4 border border-gold/30">
+                <i class="fa-solid fa-scissors text-2xl"></i>
+            </div>
+        {% endif %}
+        <h1 class="text-4xl text-white font-bold tracking-wide mb-1">{{ empresa.nome }}</h1>
+        <div class="h-1 w-16 bg-gold mx-auto rounded-full opacity-80"></div>
+    </div>
+
+    <div class="w-full max-w-4xl mb-14 relative px-6">
+        <div class="flex justify-between items-center relative z-10">
+            <div id="step-indicator-1" class="flex flex-col items-center transition-all duration-500 transform scale-110">
+                <div class="w-10 h-10 rounded-full bg-gold text-black flex items-center justify-center font-bold mb-2 shadow-[0_0_15px_rgba(251,191,36,0.4)]">1</div>
+                <span class="text-[10px] uppercase tracking-widest text-gold font-bold">Serviço</span>
+            </div>
+            <div class="flex-1 h-[1px] bg-dark-border mx-4"></div>
+            <div id="step-indicator-2" class="flex flex-col items-center opacity-30 transition-all duration-500">
+                <div class="w-10 h-10 rounded-full bg-dark-card border border-dark-border text-gray-400 flex items-center justify-center font-bold mb-2">2</div>
+                <span class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Barbeiro</span>
+            </div>
+             <div class="flex-1 h-[1px] bg-dark-border mx-4"></div>
+            <div id="step-indicator-3" class="flex flex-col items-center opacity-30 transition-all duration-500">
+                <div class="w-10 h-10 rounded-full bg-dark-card border border-dark-border text-gray-400 flex items-center justify-center font-bold mb-2">3</div>
+                <span class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Data</span>
+            </div>
+             <div class="flex-1 h-[1px] bg-dark-border mx-4"></div>
+            <div id="step-indicator-4" class="flex flex-col items-center opacity-30 transition-all duration-500">
+                <div class="w-10 h-10 rounded-full bg-dark-card border border-dark-border text-gray-400 flex items-center justify-center font-bold mb-2">4</div>
+                <span class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Fim</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="w-full max-w-4xl relative min-h-[600px] bg-dark-bg transition-all">
+        
+        <div id="step-1" class="step-content active" style="display: block;">
+            <h2 class="text-3xl text-center text-white mb-2 font-serif">Selecione o <span class="text-gold italic">Serviço</span></h2>
+            <p class="text-center text-gray-500 mb-10 font-light tracking-wide">Qual estilo vamos fazer hoje?</p>
+
+            <div class="flex flex-wrap justify-center gap-3 mb-10">
+                {% for cat in categorias %}
+                <button onclick="filterServices('{{ cat.id }}', this)" 
+                        class="cat-btn px-6 py-3 rounded-full border border-dark-border bg-dark-card text-gray-400 hover:border-gold hover:text-white transition-all duration-300 text-xs font-bold uppercase tracking-widest flex items-center gap-2
+                        {% if forloop.first %}active{% endif %}"
+                        data-cat-id="{{ cat.id }}">
+                    {% if cat.icone %}
+                        <img src="{{ cat.icone.url }}" class="w-4 h-4 object-contain filter invert opacity-70"> 
+                    {% endif %}
+                    {{ cat.nome }}
+                </button>
+                {% endfor %}
+            </div>
+
+            <div id="services-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4" style="min-height: 200px;">
+                <div class="col-span-full py-12 text-center text-gold animate-pulse">
+                    Carregando o catálogo...
+                </div>
+            </div>
+        </div>
+
+        <div id="step-2" class="step-content">
+            <div class="flex justify-between items-center mb-8 px-2">
+                <button onclick="goToStep(1)" class="text-gray-500 hover:text-white transition flex items-center gap-2 text-xs uppercase font-bold tracking-widest group">
+                    <div class="w-8 h-8 rounded-full border border-dark-border flex items-center justify-center group-hover:border-gold group-hover:bg-gold group-hover:text-black transition">
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </div>
+                    Voltar
+                </button>
+                <h2 class="text-3xl text-white font-serif text-right">O <span class="text-gold italic">Mestre</span></h2>
+            </div>
+            
+            <div id="professionals-grid" class="grid grid-cols-2 md:grid-cols-3 gap-6">
+                </div>
+        </div>
+
+        <div id="step-3" class="step-content">
+            <div class="flex justify-between items-center mb-8 px-2">
+                <button onclick="goToStep(2)" class="text-gray-500 hover:text-white transition flex items-center gap-2 text-xs uppercase font-bold tracking-widest group">
+                    <div class="w-8 h-8 rounded-full border border-dark-border flex items-center justify-center group-hover:border-gold group-hover:bg-gold group-hover:text-black transition">
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </div>
+                    Voltar
+                </button>
+                <h2 class="text-3xl text-white font-serif text-right">O <span class="text-gold italic">Momento</span></h2>
+            </div>
+            
+            <div class="grid lg:grid-cols-2 gap-12 items-start">
+                <div class="relative">
+                    <div class="absolute -inset-1 bg-gradient-to-r from-gold to-yellow-600 rounded-[26px] blur opacity-20"></div>
+                    <div class="relative bg-dark-card rounded-3xl">
+                        <input type="text" id="calendar-inline" class="hidden">
+                    </div>
+                </div>
+
+                <div class="bg-dark-card border border-dark-border rounded-3xl p-6 h-full min-h-[400px] flex flex-col">
+                    <h3 class="text-lg text-white mb-6 flex justify-between items-center border-b border-dark-border pb-4">
+                        <span class="font-serif">Horários Livres</span>
+                        <span id="selected-date-display" class="text-xs text-gold font-bold uppercase tracking-widest border border-gold/30 px-3 py-1 rounded-full bg-gold/5">-</span>
+                    </h3>
+                    <div id="time-slots" class="grid grid-cols-2 gap-3 overflow-y-auto pr-2 custom-scrollbar flex-1 content-start">
+                        <div class="col-span-2 py-20 text-center text-gray-600 italic border-2 border-dashed border-dark-border rounded-xl">Selecione um dia no calendário</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="step-4" class="step-content">
+            <div class="text-center mb-10">
+                <h2 class="text-4xl text-white mb-2 font-serif">Confirmar <span class="text-gold italic">Agendamento</span></h2>
+                <p class="text-gray-500 font-light">Confira os detalhes para finalizar.</p>
+            </div>
+
+            <div class="bg-dark-card border border-dark-border rounded-[2rem] p-8 md:p-10 mb-8 relative overflow-hidden shadow-2xl">
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-gold to-transparent opacity-50"></div>
+                
+                <div class="grid md:grid-cols-2 gap-12 items-center">
+                    <div class="space-y-6 border-b md:border-b-0 md:border-r border-dark-border pb-6 md:pb-0 md:pr-6">
+                        <div class="flex justify-between items-end">
+                            <div><span class="block text-gray-500 text-[10px] uppercase tracking-widest mb-1">Serviço</span><span id="summary-service" class="text-white font-serif text-2xl leading-none"></span></div>
+                            <span class="text-gold text-xl"><i class="fa-solid fa-scissors"></i></span>
+                        </div>
+                        <div class="flex justify-between items-end">
+                            <div><span class="block text-gray-500 text-[10px] uppercase tracking-widest mb-1">Profissional</span><span id="summary-professional" class="text-white font-bold text-lg"></span></div>
+                            <span class="text-gray-600 text-lg"><i class="fa-solid fa-user-tie"></i></span>
+                        </div>
+                        <div class="flex justify-between items-end">
+                            <div><span class="block text-gray-500 text-[10px] uppercase tracking-widest mb-1">Data e Hora</span><span id="summary-datetime" class="text-white font-bold text-lg"></span></div>
+                            <span class="text-gray-600 text-lg"><i class="fa-regular fa-calendar"></i></span>
+                        </div>
+                        <div class="pt-4 mt-4 border-t border-dark-border flex justify-between items-center">
+                            <span class="text-gray-400 text-xs uppercase tracking-widest">Valor Estimado</span>
+                            <span id="summary-price" class="text-3xl text-gold font-serif font-bold tracking-tight"></span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-5">
+                        <div class="relative group">
+                            <i class="fa-solid fa-user absolute left-5 top-4 text-gray-600 group-focus-within:text-gold transition-colors"></i>
+                            <input type="text" id="client-name" placeholder="Seu Nome Completo" class="w-full bg-black/50 border border-dark-border rounded-xl py-3.5 pl-12 text-white focus:border-gold focus:ring-1 focus:ring-gold transition outline-none placeholder-gray-700">
+                        </div>
+                        <div class="relative group">
+                            <i class="fa-brands fa-whatsapp absolute left-5 top-4 text-gray-600 group-focus-within:text-gold transition-colors"></i>
+                            <input type="text" id="client-phone" placeholder="Seu WhatsApp (DDD)" class="w-full bg-black/50 border border-dark-border rounded-xl py-3.5 pl-12 text-white focus:border-gold focus:ring-1 focus:ring-gold transition outline-none placeholder-gray-700">
+                        </div>
+                        <button onclick="confirmBooking()" class="w-full bg-gold hover:bg-yellow-400 text-black font-extrabold py-4 rounded-xl shadow-[0_4px_20px_rgba(251,191,36,0.3)] hover:shadow-[0_4px_25px_rgba(251,191,36,0.5)] transition-all transform hover:-translate-y-1 mt-2">
+                            CONFIRMAR AGENDAMENTO
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <button onclick="goToStep(3)" class="w-full text-center text-gray-600 hover:text-gold transition text-xs font-bold uppercase tracking-widest"><i class="fa-solid fa-pen mr-2"></i> Corrigir Dados</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const LIMITE_AGENDAMENTO_DIAS = {{ empresa.limite_agendamento_dias|default:30 }};
+</script>
+<script src="{% static 'js/agendamento.js' %}"></script>
+
+<script>
+    // --- LÓGICA JAVASCRIPT ---
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        const firstCatBtn = document.querySelector('.cat-btn');
+        if(firstCatBtn) {
+            const catId = firstCatBtn.getAttribute('data-cat-id');
+            filterServices(catId, firstCatBtn);
+        }
+    });
+
+    // 1. Filtro de Serviços
+    window.filterServices = function(catId, btnElement) {
+        document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+        if(btnElement) btnElement.classList.add('active');
+
+        const grid = document.getElementById('services-grid');
+        grid.style.minHeight = '200px'; 
+        grid.innerHTML = '<div class="col-span-full py-20 text-center text-gold animate-pulse"><i class="fa-solid fa-circle-notch fa-spin text-3xl mb-3"></i><p class="text-xs uppercase tracking-widest opacity-70">Carregando...</p></div>';
+
+        fetch(`/api/get_services/?categoria_id=${catId}`)
+            .then(res => res.json())
+            .then(data => {
+                if(data.length === 0) {
+                    grid.innerHTML = '<div class="col-span-full text-center text-gray-600 py-10 italic">Nenhum serviço nesta categoria.</div>';
+                    return;
+                }
+                
+                // --- CORREÇÃO AQUI: CARD PADRONIZADO (h-24 e Truncate) ---
+                grid.innerHTML = data.map(s => `
+                    <div onclick="selectServiceInternal(${s.id}, '${s.nome.replace(/'/g, "\\'")}', '${s.preco}', '${s.tempo}')" 
+                         class="group bg-dark-card border border-dark-border h-24 px-5 rounded-2xl cursor-pointer hover:border-gold/50 hover:bg-white/5 transition-all duration-300 relative overflow-hidden flex justify-between items-center shadow-md">
+                        <div class="relative z-10 flex-1 pr-4">
+                            <h4 class="text-white font-bold text-lg mb-1 group-hover:text-gold transition-colors font-serif tracking-wide truncate">${s.nome}</h4>
+                            <div class="flex items-center gap-4 text-xs font-medium uppercase tracking-wider">
+                                <span class="text-gray-500"><i class="fa-regular fa-clock text-gold mr-1"></i> ${s.tempo} min</span>
+                                <span class="text-gold">R$ ${formatMoney(s.preco)}</span>
+                            </div>
+                        </div>
+                        <div class="w-10 h-10 rounded-full bg-black border border-dark-border flex items-center justify-center text-gray-600 group-hover:bg-gold group-hover:text-black group-hover:border-gold transition-all transform group-hover:rotate-45 shrink-0">
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </div>
+                    </div>
+                `).join('');
+            });
+    };
+
+    // 2. Seleção de Serviço
+    window.selectServiceInternal = function(id, nome, preco, tempo) {
+        bookingState.servicoId = id;
+        bookingState.resumo.servico = nome;
+        bookingState.resumo.preco = preco;
+
+        showLoader(true);
+        fetch(`/api/get_professionals/?servico_id=${id}`)
+            .then(res => res.json())
+            .then(data => {
+                showLoader(false);
+                const grid = document.getElementById('professionals-grid');
+                
+                if (!data || data.length === 0) {
+                     Swal.fire('Ops!', 'Não encontramos profissionais para este serviço no momento.', 'warning');
+                     return;
+                }
+
+                grid.innerHTML = data.map(p => `
+                    <div onclick="selectProfessionalInternal(${p.id}, this.getAttribute('data-name'))" data-name="${p.nome}"
+                         class="group bg-dark-card border border-dark-border rounded-[2.5rem] cursor-pointer hover:border-gold hover:shadow-[0_10px_30px_-10px_rgba(251,191,36,0.2)] transition-all overflow-hidden flex flex-col relative h-full">
+                        
+                        <div class="relative w-full aspect-square bg-black overflow-hidden border-b border-dark-border">
+                            <img src="${p.foto_url || `https://ui-avatars.com/api/?name=${p.nome}&background=18181b&color=fbbf24&bold=true`}" 
+                                 class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 filter grayscale-[0.5] group-hover:grayscale-0">
+                            <div class="absolute inset-0 bg-gold/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                        </div>
+                        
+                        <div class="p-5 text-center flex flex-col justify-center flex-grow bg-dark-card group-hover:bg-white/5 transition-colors">
+                            <h4 class="text-white font-bold text-xl group-hover:text-gold transition font-serif leading-tight truncate w-full">${p.nome}</h4>
+                            <span class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-2 block group-hover:text-gray-400 transition">${p.especialidade || 'Especialista'}</span>
+                        </div>
+                    </div>
+                `).join('');
+                
+                goToStep(2);
+            })
+            .catch(error => {
+                showLoader(false);
+                console.error('Erro ao buscar profissionais:', error);
+                Swal.fire('Erro', 'Falha ao carregar profissionais.', 'error');
+            });
+    };
+
+    window.selectProfessionalInternal = function(id, nome) {
+        selectProfessional(id, nome); 
+        goToStep(3); 
+    };
+
+    // 3. Horários
+    const originalFetchTimeSlots = window.fetchTimeSlots;
+    window.fetchTimeSlots = function(dateStr) {
+        bookingState.data = dateStr;
+        const container = document.getElementById('time-slots');
+        const displayDate = document.getElementById('selected-date-display');
+        if(displayDate) displayDate.innerText = formatDateBR(dateStr);
+
+        container.innerHTML = '<div class="col-span-2 py-10 text-center text-gold animate-pulse text-xs uppercase tracking-widest">Buscando disponibilidade...</div>';
+
+        fetch(`/api/get_slots/?data=${dateStr}&profissional=${bookingState.profissionalId}&servico=${bookingState.servicoId}`)
+            .then(res => res.json())
+            .then(data => {
+                container.innerHTML = '';
+                if(data.message || !data.slots || data.slots.length === 0) {
+                     container.innerHTML = `<div class="col-span-2 py-12 text-center text-gray-500 border border-dashed border-dark-border rounded-xl text-sm">Agenda lotada ou indisponível.</div>`;
+                     return;
+                }
+
+                data.slots.forEach(slot => {
+                    const btn = document.createElement('button');
+                    btn.className = `py-3 rounded-xl font-bold text-sm transition-all border ${
+                        slot.disponivel 
+                        ? "bg-dark-card border-dark-border text-gray-300 hover:border-gold hover:bg-gold hover:text-black shadow-sm" 
+                        : "bg-black/40 border-transparent text-gray-700 line-through cursor-not-allowed"
+                    }`;
+                    btn.innerText = slot.hora;
+                    if(slot.disponivel) {
+                        btn.onclick = () => { selectTime(slot.hora); goToStep(4); };
+                    } else {
+                        btn.disabled = true;
+                    }
+                    container.appendChild(btn);
+                });
+            });
+    };
+
+    // 4. Controle de Steps (Transição Bounce)
+    function goToStep(stepNum) {
+        const currentActive = document.querySelector('.step-content.active') || 
+                              document.querySelector('.step-enter-right') || 
+                              document.querySelector('.step-enter-left');
+        let currentId = 1;
+        if(currentActive && currentActive.id) {
+             const parts = currentActive.id.split('-');
+             if (parts.length > 1) currentId = parseInt(parts[1]);
+        }
+        
+        const direction = stepNum > currentId ? 'forward' : 'backward';
+
+        document.querySelectorAll('.step-content').forEach(el => {
+            el.style.display = 'none'; 
+            el.classList.remove('active', 'step-enter-right', 'step-enter-left');
+        });
+
+        const nextStep = document.getElementById(`step-${stepNum}`);
+        if(nextStep) {
+            nextStep.style.removeProperty('display'); 
+            
+            if(direction === 'forward') {
+                nextStep.classList.add('step-enter-right');
+            } else {
+                nextStep.classList.add('step-enter-left');
+            }
+            
+            setTimeout(() => nextStep.classList.add('active'), 10);
+        }
+
+        updateStepperUI(stepNum);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        if(stepNum === 3 && typeof calendarInstance !== 'undefined') {
+            setTimeout(() => calendarInstance.redraw(), 50);
+        }
+    }
+
+    function updateStepperUI(stepNum) {
+        for(let i=1; i<=4; i++) {
+            const indicator = document.getElementById(`step-indicator-${i}`);
+            const circle = indicator.querySelector('div');
+            const text = indicator.querySelector('span');
+            
+            indicator.classList.remove('opacity-30', 'scale-110');
+            
+            if(i <= stepNum) {
+                indicator.classList.add('scale-110');
+                circle.className = "w-10 h-10 rounded-full bg-gold text-black flex items-center justify-center font-bold mb-2 shadow-[0_0_15px_rgba(251,191,36,0.4)] transition-all duration-500";
+                text.className = "text-[10px] uppercase tracking-widest text-gold font-bold transition-colors duration-500";
+            } else {
+                indicator.classList.add('opacity-30');
+                circle.className = "w-10 h-10 rounded-full bg-dark-card border border-dark-border text-gray-400 flex items-center justify-center font-bold mb-2 transition-all duration-500";
+                text.className = "text-[10px] uppercase tracking-widest text-gray-500 font-bold transition-colors duration-500";
+            }
+        }
+    }
+</script>
+{% endblock %}

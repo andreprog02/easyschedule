@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block title %}Configurar WhatsApp - EasySchedule{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4">
+    <div class="mb-8 flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-800">Comunicação via WhatsApp</h1>
+            <p class="text-slate-500 text-sm">Configure como os seus clientes recebem as notificações.</p>
+        </div>
+        <a href="{% url 'dashboard' %}" class="text-slate-400 hover:text-slate-600 font-bold text-xs uppercase tracking-widest transition">
+            <i class="fa-solid fa-arrow-left mr-1"></i> Voltar
+        </a>
+    </div>
+
+    <form method="POST" class="space-y-6">
+        {% csrf_token %}
+
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+            <h3 class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-gears text-blue-500"></i> Credenciais Técnicas (Twilio)
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Account SID</label>
+                    <input type="text" name="twilio_sid" value="{{ empresa.twilio_sid|default:'' }}" class="w-full border-slate-200 rounded-xl focus:ring-blue-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Auth Token</label>
+                    <input type="password" name="twilio_token" value="{{ empresa.twilio_token|default:'' }}" class="w-full border-slate-200 rounded-xl focus:ring-blue-500 text-sm">
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Número de WhatsApp Origem (Twilio)</label>
+                    <input type="text" name="twilio_whatsapp_origem" value="{{ empresa.twilio_whatsapp_origem|default:'' }}" placeholder="whatsapp:+14155238886" class="w-full border-slate-200 rounded-xl focus:ring-blue-500 text-sm">
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+            <h3 class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <i class="fa-brands fa-whatsapp text-green-500 text-lg"></i> Templates de Mensagens
+            </h3>
+            
+            <div class="bg-blue-50 p-4 rounded-xl mb-6">
+                <p class="text-[10px] font-bold text-blue-600 uppercase mb-2">Etiquetas disponíveis:</p>
+                <div class="flex flex-wrap gap-2">
+                    <span class="bg-white px-2 py-1 rounded border border-blue-200 text-[10px] font-mono">{cliente}</span>
+                    <span class="bg-white px-2 py-1 rounded border border-blue-200 text-[10px] font-mono">{empresa}</span>
+                    <span class="bg-white px-2 py-1 rounded border border-blue-200 text-[10px] font-mono">{data}</span>
+                    <span class="bg-white px-2 py-1 rounded border border-blue-200 text-[10px] font-mono">{hora}</span>
+                    <span class="bg-white px-2 py-1 rounded border border-blue-200 text-[10px] font-mono">{profissional}</span>
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-2">Mensagem de Confirmação</label>
+                    <textarea name="msg_confirmacao" rows="3" class="w-full border-slate-200 rounded-xl focus:ring-green-500 text-sm">{{ empresa.msg_confirmacao }}</textarea>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-2">Mensagem de Cancelamento</label>
+                    <textarea name="msg_cancelamento" rows="3" class="w-full border-slate-200 rounded-xl focus:ring-red-500 text-sm">{{ empresa.msg_cancelamento }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="w-full bg-slate-900 text-white font-bold py-4 rounded-2xl hover:bg-black transition shadow-lg">
+            Guardar Configurações
+        </button>
+    </form>
+</div>
+{% endblock %}

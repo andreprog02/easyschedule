@@ -24,6 +24,28 @@ class Empresa(models.Model):
     # Novo campo adicionado corretamente
     limite_agendamento_dias = models.PositiveIntegerField(default=30, verbose_name="Janela de Agendamento (dias)")
 
+    # Adicione este campo:
+    TEMAS_CHOICES = [
+        ('padrao', 'Padrão (Azul/Clean)'),
+        ('feminino', 'Feminino (Bordô/Pastel)'),
+        ('barber_dark', 'Barbearia (Dark/Gold)'), # <--- ADICIONE ISSO
+    ]
+    template_tema = models.CharField(max_length=20, choices=TEMAS_CHOICES, default='padrao')
+
+
+    # Credenciais Twilio
+    twilio_sid = models.CharField(max_length=100, blank=True, null=True)
+    twilio_token = models.CharField(max_length=100, blank=True, null=True)
+    twilio_whatsapp_origem = models.CharField(max_length=30, blank=True, null=True, help_text="Ex: whatsapp:+14155238886")
+
+    # Mensagens Personalizadas
+    msg_confirmacao = models.TextField(
+        default="Olá {cliente}, seu horário na {empresa} foi confirmado: {data} às {hora}. Profissional: {profissional}."
+    )
+    msg_cancelamento = models.TextField(
+        default="Olá {cliente}, infelizmente o seu agendamento na {empresa} para o dia {data} às {hora} foi cancelado."
+    )
+
     def save(self, *args, **kwargs):
         if not self.slug:
             uid = str(uuid.uuid4())[:4]
