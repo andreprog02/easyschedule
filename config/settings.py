@@ -1,16 +1,21 @@
 from pathlib import Path
 import os
+from decouple import config, Csv
+import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# --- MANTENHA SUA SECRET_KEY AQUI ---
-SECRET_KEY = 'django-insecure-troque-isso-por-uma-chave-aleatoria-se-for-producao'
+# --- SEGURANÇA E AMBIENTE ---
+# Lê a SECRET_KEY do .env. Se não achar, usa a insegura (apenas para dev local)
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-troque-isso-por-uma-chave-aleatoria-se-for-producao')
 
-DEBUG = True
+# Lê o DEBUG do .env. Padrão é False (Segurança máxima).
+DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = []
+# Lê os hosts permitidos do .env (separados por vírgula)
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1,localhost', cast=Csv())
 
-# 1. APLICATIVOS INSTALADOS (Adicionei os seus 4 apps aqui)
+# 1. APLICATIVOS INSTALADOS
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -28,6 +33,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware', # Recomendado para Deploy (se tiver instalado)
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -42,7 +48,7 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'], # Pasta que criamos
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -57,11 +63,13 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
+# 3. BANCO DE DADOS (Híbrido: SQLite Local / Postgres Produção)
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': config(
+        'DATABASE_URL',
+        default=f'sqlite:///{BASE_DIR / "db.sqlite3"}',
+        cast=dj_database_url.parse
+    )
 }
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -71,23 +79,32 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-LANGUAGE_CODE = 'pt-br' # Mudei para Português
-TIME_ZONE = 'America/Sao_Paulo' # Fuso Horário
+# INTERNACIONALIZAÇÃO
+LANGUAGE_CODE = 'pt-br'
+TIME_ZONE = 'America/Sao_Paulo'
 USE_I18N = True
 USE_TZ = True
 
-# 3. ARQUIVOS ESTÁTICOS E MÍDIA (Uploads)
+# 4. ARQUIVOS ESTÁTICOS E MÍDIA
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
+# STATIC_ROOT é obrigatório para o comando 'collectstatic' no deploy
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
+# 5. CONFIGURAÇÃO DE LOGIN
 LOGIN_REDIRECT_URL = 'dashboard'
 LOGOUT_REDIRECT_URL = 'login'
 LOGIN_URL = 'login'
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+# 6. CONFIGURAÇÃO DE E-MAIL (Lê do .env ou imprime no console se não tiver config)
+EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
+EMAIL_HOST = config('EMAIL_HOST', default='')
+EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
