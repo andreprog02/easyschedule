@@ -15,59 +15,35 @@ from core.models import Empresa, HorarioEspecial
 from services.models import Categoria, Servico
 from professionals.models import Profissional, BloqueioAgenda
 from .models import Agendamento
+from .whatsapp import enviar_mensagem_evolution  # <--- ADICIONE ESTA LINHA
 
 # --- FUNÇÃO DE ENVIO DE WHATSAPP (Centralizada) ---
 def disparar_whatsapp_thread(agendamento_id, tipo='confirmacao'):
     """
-    Envia WhatsApp em segundo plano.
-    tipo: 'confirmacao' ou 'cancelamento'
+    Função executada em segundo plano (Thread) para não travar o site.
     """
     try:
+        # Busca o agendamento no banco novamente para garantir dados frescos
         from .models import Agendamento
-        # Re-busca o objeto para garantir dados atualizados
         agendamento = Agendamento.objects.get(id=agendamento_id)
-        empresa = agendamento.empresa
         
-        # 1. Valida credenciais
-        if not empresa.twilio_sid or not empresa.twilio_token:
-            return
-
-        client = Client(empresa.twilio_sid, empresa.twilio_token)
+        # Formata a data e hora para brasileiro (dia/mês)
+        data_fmt = agendamento.data_hora_inicio.strftime('%d/%m/%Y')
+        hora_fmt = agendamento.data_hora_inicio.strftime('%H:%M')
         
-        # 2. Seleciona o Template Correto
-        if tipo == 'cancelamento':
-            template = empresa.msg_cancelamento
-        else:
-            template = empresa.msg_confirmacao
-
-        msg = template.format(
-            cliente=agendamento.cliente_nome,
-            empresa=empresa.nome,
-            data=agendamento.data_hora_inicio.strftime('%d/%m/%Y'),
-            hora=agendamento.data_hora_inicio.strftime('%H:%M'),
-            profissional=agendamento.profissional.nome
+        # Chama nosso arquivo whatsapp.py
+        enviar_mensagem_evolution(
+            cliente_nome=agendamento.cliente_nome,
+            cliente_telefone=agendamento.cliente_telefone,
+            data=data_fmt,
+            hora=hora_fmt,
+            servico=agendamento.servico.nome,
+            profissional=agendamento.profissional.nome,
+            tipo=tipo
         )
-        
-        # 3. Tratamento do Telefone do Cliente (DESTINO)
-        tel_destino = ''.join(filter(str.isdigit, agendamento.cliente_telefone))
-        if len(tel_destino) <= 11: 
-            tel_destino = "55" + tel_destino
-        destino_final = f"whatsapp:+{tel_destino}"
-
-        # 4. Tratamento do Telefone da Empresa (ORIGEM)
-        origem_numeros = ''.join(filter(str.isdigit, empresa.twilio_whatsapp_origem))
-        origem_final = f"whatsapp:+{origem_numeros}"
-
-        # 5. Envio
-        client.messages.create(
-            from_=origem_final,
-            body=msg,
-            to=destino_final
-        )
-        print(f"WhatsApp ({tipo}) enviado de {origem_final} para {agendamento.cliente_nome}")
         
     except Exception as e:
-        print(f"Erro ao enviar WhatsApp ({tipo}): {e}")
+        print(f"⚠️ Erro na Thread de WhatsApp: {e}")
 
 
 # --- WIZARD E APIS DE CONSULTA ---
